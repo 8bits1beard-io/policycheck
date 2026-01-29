@@ -97,7 +97,6 @@ function Invoke-PolicyCheck {
                         'Directory.Read.All'
                         'Device.Read.All'
                     )
-                    NoWelcome = $true
                 }
                 if ($TenantId) { $connectParams['TenantId'] = $TenantId }
 
