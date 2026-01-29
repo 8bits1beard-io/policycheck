@@ -1,6 +1,6 @@
 # PolicyCheck
 
-GPO & Intune policy scanner for Windows devices. Identifies applied Group Policies and MDM/Intune policies, analyzes overlap, and generates an HTML report to assist with GPO-to-Intune migration.
+GPO & Intune policy scanner for Windows devices. Identifies applied Group Policies and MDM/Intune policies, analyzes overlap, and exports results to JSON for the web viewer tool to assist with GPO-to-Intune migration.
 
 ## What It Does
 
@@ -9,7 +9,7 @@ GPO & Intune policy scanner for Windows devices. Identifies applied Group Polici
 - **Overlap Analysis**: Cross-references GPO settings against their Intune CSP equivalents using a built-in mapping file
 - **App Assignments** (Graph): Lists Intune app assignments (Win32, LOB, Store, WinGet, etc.)
 - **Group Memberships** (Graph): Shows Azure AD groups the device belongs to (drives policy/app targeting)
-- **HTML Report**: Generates a self-contained report with collapsible sections, color-coded overlap analysis, and search/filter
+- **JSON Export**: Exports all data to JSON for the web viewer tool
 
 ## Requirements
 
@@ -32,14 +32,14 @@ Install-Module Microsoft.Graph -Scope CurrentUser
 # Full scan with Graph API (opens browser for auth)
 .\PolicyCheck.ps1 -IncludeGraph
 
-# Full scan with specific tenant and output path
-.\PolicyCheck.ps1 -IncludeGraph -TenantId "contoso.onmicrosoft.com" -OutputPath "C:\Reports\scan.html"
+# Full scan with specific tenant
+.\PolicyCheck.ps1 -IncludeGraph -TenantId "contoso.onmicrosoft.com"
 
 # Skip MDM diagnostics tool (faster)
 .\PolicyCheck.ps1 -SkipMDMDiag
 
-# Export results to JSON for the web viewer
-.\PolicyCheck.ps1 -ExportJson -JsonPath "C:\Reports\device1.json"
+# Export to specific path
+.\PolicyCheck.ps1 -OutputPath "C:\Reports\device1.json"
 ```
 
 ## Parameters
@@ -48,10 +48,8 @@ Install-Module Microsoft.Graph -Scope CurrentUser
 |-----------|------|-------------|
 | `-IncludeGraph` | Switch | Connect to Graph API for Intune profiles, app assignments, and group memberships |
 | `-TenantId` | String | Azure AD tenant ID or domain (e.g., `contoso.onmicrosoft.com`) |
-| `-OutputPath` | String | HTML report file path (default: timestamped file in current directory) |
 | `-SkipMDMDiag` | Switch | Skip `mdmdiagnosticstool` execution |
-| `-ExportJson` | Switch | Export results to a JSON file for use with the PolicyCheck Viewer web tool |
-| `-JsonPath` | String | JSON export file path (default: timestamped file with computer name in current directory) |
+| `-OutputPath` | String | JSON export file path (default: timestamped file in current directory) |
 
 ## Graph API Permissions
 
@@ -65,21 +63,31 @@ When using `-IncludeGraph`, the tool requests these Microsoft Graph scopes via i
 | `Directory.Read.All` | Read Azure AD group memberships |
 | `Device.Read.All` | Look up the device in Azure AD |
 
-## HTML Report Sections
+## Web Viewer Tool
 
-1. **Summary Cards** - At-a-glance counts for GPOs, MDM settings, matches, conflicts, and migration candidates
-2. **Applied Group Policies** - All GPOs with scope, link location, and link order
-3. **MDM Enrollment** - Enrollment provider, UPN, and tenant details
-4. **Overlap Analysis** - Color-coded table with search/filter:
-   - **Green**: Setting configured in both GPO and Intune, values match
-   - **Red**: Setting in both, values conflict
-   - **Cyan**: GPO-only, Intune mapping exists (migration candidate)
-   - **Magenta**: GPO-only, no known Intune equivalent
-5. **Azure AD Groups** - Device group memberships (dynamic vs assigned)
-6. **App Assignments** - Intune apps with assignment intent and targets
-7. **Intune Profiles** - Configuration profiles and Settings Catalog policies
-8. **MDM Policy Details** - Full list of PolicyManager CSP settings
-9. **GPO Registry Details** - All scanned registry policy entries
+PolicyCheck includes a standalone HTML viewer (`Tools/PolicyCheckViewer.html`) that lets you visualize and compare JSON exports from multiple devices.
+
+**How to use:**
+
+1. Run PolicyCheck on each device you want to analyze
+2. Copy the JSON files to a central location
+3. Open `PolicyCheckViewer.html` in a web browser (no server required, runs locally)
+4. Load one or more JSON exports to view device policies side-by-side
+
+The web viewer displays all policy data sections and enables comparison across devices to identify configuration differences:
+- **Summary Cards** - At-a-glance counts for GPOs, MDM settings, matches, conflicts, and migration candidates
+- **Applied Group Policies** - All GPOs with scope, link location, and link order
+- **MDM Enrollment** - Enrollment provider, UPN, and tenant details
+- **Overlap Analysis** - Color-coded table with search/filter:
+  - **Green**: Setting configured in both GPO and Intune, values match
+  - **Red**: Setting in both, values conflict
+  - **Cyan**: GPO-only, Intune mapping exists (migration candidate)
+  - **Magenta**: GPO-only, no known Intune equivalent
+- **Azure AD Groups** - Device group memberships (dynamic vs assigned)
+- **App Assignments** - Intune apps with assignment intent and targets
+- **Intune Profiles** - Configuration profiles and Settings Catalog policies
+- **MDM Policy Details** - Full list of PolicyManager CSP settings
+- **GPO Registry Details** - All scanned registry policy entries
 
 ## Module Usage
 
@@ -116,19 +124,6 @@ The GPO-to-Intune mapping is stored in `Config/SettingsMap.psd1`. Add entries fo
     )
 }
 ```
-
-## Web Viewer Tool
-
-PolicyCheck includes a standalone HTML viewer (`Tools/PolicyCheckViewer.html`) that lets you visualize and compare JSON exports from multiple devices.
-
-**How to use:**
-
-1. Run PolicyCheck with the `-ExportJson` parameter on each device you want to analyze
-2. Copy the JSON files to a central location
-3. Open `PolicyCheckViewer.html` in a web browser (no server required, runs locally)
-4. Load one or more JSON exports to view device policies side-by-side
-
-The web viewer displays all policy data sections with the same formatting as the HTML report and enables comparison across devices to identify configuration differences.
 
 ## Limitations
 

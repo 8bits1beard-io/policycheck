@@ -5,31 +5,27 @@ function Invoke-PolicyCheck {
     .DESCRIPTION
         Orchestrates collection of Group Policy data, MDM/Intune policy data,
         and optionally Microsoft Graph API data. Performs overlap analysis and
-        generates both a console summary and HTML report.
+        exports results to JSON for the web viewer tool.
     .PARAMETER IncludeGraph
         Connect to Microsoft Graph API to retrieve Intune profile metadata,
         app assignments, and Azure AD group memberships.
     .PARAMETER TenantId
         Azure AD tenant ID for Graph authentication.
-    .PARAMETER OutputPath
-        Path for the HTML report file. Defaults to a timestamped file in the current directory.
     .PARAMETER SkipMDMDiag
         Skip running mdmdiagnosticstool (can be slow on some devices).
-    .PARAMETER ExportJson
-        Export results to a JSON file for use with the PolicyCheck Viewer web tool.
-    .PARAMETER JsonPath
+    .PARAMETER OutputPath
         Path for the JSON export file. Defaults to a timestamped file in the current directory.
     .EXAMPLE
         Invoke-PolicyCheck
-        Runs a local-only scan and generates an HTML report.
+        Runs a local-only scan and exports results to JSON.
     .EXAMPLE
         Invoke-PolicyCheck -IncludeGraph -TenantId "contoso.onmicrosoft.com"
         Runs a full scan including Graph API queries for Intune metadata.
     .EXAMPLE
-        Invoke-PolicyCheck -ExportJson -JsonPath "C:\Reports\device1.json"
-        Runs a local scan and exports results to a JSON file for the web viewer.
+        Invoke-PolicyCheck -OutputPath "C:\Reports\device1.json"
+        Runs a local scan and exports results to a specific path.
     .OUTPUTS
-        PSCustomObject with all collected data, analysis results, and report path.
+        PSCustomObject with all collected data and analysis results.
     #>
     [CmdletBinding()]
     param(
@@ -37,13 +33,9 @@ function Invoke-PolicyCheck {
 
         [string]$TenantId,
 
-        [string]$OutputPath = ".\PolicyCheck_Report_$(Get-Date -Format 'yyyyMMdd_HHmmss').html",
-
         [switch]$SkipMDMDiag,
 
-        [switch]$ExportJson,
-
-        [string]$JsonPath = ".\PolicyCheck_$($env:COMPUTERNAME)_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
+        [string]$OutputPath = ".\PolicyCheck_$($env:COMPUTERNAME)_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
     )
 
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -159,35 +151,28 @@ function Invoke-PolicyCheck {
     Write-ConsoleSummary -Analysis $analysis -GPOData $gpoData -MDMData $mdmData `
         -AppData $appData -GroupData $groupData
 
-    $reportPath = ConvertTo-HtmlReport -Analysis $analysis -GPOData $gpoData `
-        -MDMData $mdmData -GraphData $graphData -AppData $appData `
-        -GroupData $groupData -OutputPath $OutputPath
+    # Return structured object for pipeline usage
+    $result = [PSCustomObject]@{
+        GPOData   = $gpoData
+        MDMData   = $mdmData
+        GraphData = $graphData
+        AppData   = $appData
+        GroupData = $groupData
+        Analysis  = $analysis
+    }
+
+    # Export to JSON
+    $jsonExportPath = ConvertTo-JsonExport -Result $result -OutputPath $OutputPath
+    $result | Add-Member -NotePropertyName 'JsonPath' -NotePropertyValue $jsonExportPath
 
     $stopwatch.Stop()
 
     Write-Host ""
     Write-Host "  ─────────────────────────────" -ForegroundColor DarkGray
-    Write-Host "  HTML report saved to:" -ForegroundColor White
-    Write-Host "  $reportPath" -ForegroundColor Green
+    Write-Host "  JSON export saved to:" -ForegroundColor White
+    Write-Host "  $jsonExportPath" -ForegroundColor Green
     Write-Host "  Completed in $([math]::Round($stopwatch.Elapsed.TotalSeconds, 1))s" -ForegroundColor Gray
     Write-Host ""
-
-    # Return structured object for pipeline usage
-    $result = [PSCustomObject]@{
-        GPOData    = $gpoData
-        MDMData    = $mdmData
-        GraphData  = $graphData
-        AppData    = $appData
-        GroupData  = $groupData
-        Analysis   = $analysis
-        ReportPath = $reportPath
-    }
-
-    if ($ExportJson) {
-        $jsonExportPath = ConvertTo-JsonExport -Result $result -OutputPath $JsonPath
-        Write-Host "  JSON export saved to: $jsonExportPath" -ForegroundColor Green
-        $result | Add-Member -NotePropertyName 'JsonPath' -NotePropertyValue $jsonExportPath
-    }
 
     return $result
 }
