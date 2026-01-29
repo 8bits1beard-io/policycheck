@@ -1682,6 +1682,18 @@
 
             const groups = groupData.Groups;
             const deviceInfo = groupData.Device;
+
+            // Separate groups by type
+            const dynamicGroups = groups.filter(g => g.GroupType === 'Dynamic');
+            const assignedGroups = groups.filter(g => g.GroupType !== 'Dynamic');
+
+            const renderGroupChips = (groupList, typeClass) => {
+                if (!groupList.length) return '<span style="color: var(--text-secondary); font-style: italic;">None</span>';
+                return groupList.map(g =>
+                    `<span class="group-chip ${typeClass}" title="${escapeHtml(g.Description || 'No description')}">${escapeHtml(g.DisplayName || 'Unknown Group')}</span>`
+                ).join('');
+            };
+
             return `
                 <div class="section">
                     <div class="section-header collapsed">
@@ -1700,14 +1712,19 @@
                             </div>
                             <hr style="border-color: var(--border-color); margin: 15px 0;">
                         ` : ''}
-                        <h3 style="margin-bottom: 10px; font-size: 1rem;">Group Memberships</h3>
-                        <div class="info-box info">[D] = Dynamic membership | [A] = Assigned membership</div>
-                        <div class="group-list">
-                            ${groups.map(g => {
-                                const typeClass = g.GroupType === 'Dynamic' ? 'dynamic' : 'assigned';
-                                const typeLabel = g.GroupType === 'Dynamic' ? '[D]' : '[A]';
-                                return `<span class="group-chip ${typeClass}" title="${escapeHtml(g.Description || 'No description')}">${typeLabel} ${escapeHtml(g.DisplayName || 'Unknown Group')}</span>`;
-                            }).join('')}
+
+                        <div class="group-category">
+                            <h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--cyan);">Dynamic Memberships (${dynamicGroups.length})</h3>
+                            <div class="group-list">
+                                ${renderGroupChips(dynamicGroups, 'dynamic')}
+                            </div>
+                        </div>
+
+                        <div class="group-category" style="margin-top: 20px;">
+                            <h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--blue);">Assigned Memberships (${assignedGroups.length})</h3>
+                            <div class="group-list">
+                                ${renderGroupChips(assignedGroups, 'assigned')}
+                            </div>
                         </div>
                     </div>
                 </div>
