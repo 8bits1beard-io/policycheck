@@ -1655,7 +1655,7 @@
                 } else if (a.TargetType === 'All Users') {
                     targetLabel = '<span class="status-tag migration-ready">All Users</span>';
                 } else if (a.GroupId && groupData?.Groups) {
-                    const group = groupData.Groups.find(g => g.Id === a.GroupId);
+                    const group = groupData.Groups.find(g => g.ObjectId === a.GroupId);
                     const groupName = group?.DisplayName || 'Group';
                     targetLabel = `<span class="status-tag mdm-only">${escapeHtml(groupName)}</span>`;
                 } else {
@@ -1893,7 +1893,7 @@
             if (!groupData?.Available || !groupData?.DeviceFound || !groupData?.Groups) {
                 return [];
             }
-            return groupData.Groups.map(g => g.Id).filter(id => id);
+            return groupData.Groups.map(g => g.ObjectId).filter(id => id);
         }
 
         // Check if a policy applies to the device based on assignments
@@ -1940,7 +1940,7 @@
                     reasons.push('<span class="status-tag migration-ready">All Users</span>');
                 } else if (targetType === 'groupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
                     // Find group name
-                    const group = groupData?.Groups?.find(g => g.Id === groupId);
+                    const group = groupData?.Groups?.find(g => g.ObjectId === groupId);
                     const groupName = group?.DisplayName || 'Group';
                     reasons.push(`<span class="status-tag mdm-only" title="${escapeHtml(groupId)}">${escapeHtml(groupName)}</span>`);
                 }
