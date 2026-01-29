@@ -581,10 +581,11 @@
 
     <!-- Upload View -->
     <div id="view-upload" class="view active">
+        <input type="file" id="file-input" accept=".json" multiple style="position: absolute; left: -9999px;">
         <div class="drop-zone" id="drop-zone">
             <h2>Drop PolicyCheck JSON Files Here</h2>
             <p>or click to select files</p>
-            <input type="file" id="file-input" accept=".json" multiple style="display: none;">
+            <label for="file-input" class="btn" style="margin-top: 15px; display: inline-block; cursor: pointer;">Browse Files</label>
         </div>
 
         <div id="loaded-devices">
@@ -632,7 +633,12 @@
             const dropZone = document.getElementById('drop-zone');
             const fileInput = document.getElementById('file-input');
 
-            dropZone.addEventListener('click', () => fileInput.click());
+            // Click anywhere on drop zone (except the button) opens file picker
+            dropZone.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'LABEL') {
+                    fileInput.click();
+                }
+            });
 
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
