@@ -68,35 +68,36 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
         }
     }
 
-    # --- 3. Get device configuration profiles ---
+    # --- 3. Get device configuration profiles (using beta with $expand for assignments) ---
     $profiles = @()
     try {
-        $configs = Get-MgDeviceManagementDeviceConfiguration -All -ErrorAction Stop
+        Write-Host "        Fetching device configuration profiles..." -ForegroundColor Gray
+        $uri = 'https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?$expand=assignments&$top=999'
+        $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
 
-        $profiles = @(foreach ($config in $configs) {
-            # Get assignments for each profile
-            $assignments = @()
-            try {
-                $assignments = @(Get-MgDeviceManagementDeviceConfigurationAssignment `
-                    -DeviceConfigurationId $config.Id -ErrorAction SilentlyContinue |
-                    ForEach-Object {
-                        [PSCustomObject]@{
-                            TargetType = $_.Target.AdditionalProperties.'@odata.type'
-                            GroupId    = $_.Target.AdditionalProperties.groupId
-                        }
-                    })
-            }
-            catch {
-                Write-Verbose "Could not get assignments for profile $($config.DisplayName): $_"
-            }
+        $allConfigs = @($response.value)
+        while ($response.'@odata.nextLink') {
+            $response = Invoke-MgGraphRequest -Uri $response.'@odata.nextLink' -Method GET -ErrorAction Stop
+            $allConfigs += $response.value
+        }
+
+        Write-Host "        Processing $($allConfigs.Count) profiles..." -ForegroundColor Gray
+
+        $profiles = @(foreach ($config in $allConfigs) {
+            $assignments = @($config.assignments | Where-Object { $_ } | ForEach-Object {
+                [PSCustomObject]@{
+                    TargetType = $_.target.'@odata.type'
+                    GroupId    = $_.target.groupId
+                }
+            })
 
             [PSCustomObject]@{
-                Id              = $config.Id
-                DisplayName     = $config.DisplayName
-                Description     = $config.Description
-                OdataType       = $config.AdditionalProperties.'@odata.type'
-                CreatedDateTime = $config.CreatedDateTime
-                LastModified    = $config.LastModifiedDateTime
+                Id              = $config.id
+                DisplayName     = $config.displayName
+                Description     = $config.description
+                OdataType       = $config.'@odata.type'
+                CreatedDateTime = $config.createdDateTime
+                LastModified    = $config.lastModifiedDateTime
                 Assignments     = $assignments
             }
         })
@@ -107,34 +108,37 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
         Write-Warning "Failed to retrieve device configuration profiles: $_"
     }
 
-    # --- 4. Get compliance policies ---
+    # --- 4. Get compliance policies (using beta with $expand) ---
     $compliancePolicies = @()
     try {
-        $compliancePolicies = @(Get-MgDeviceManagementDeviceCompliancePolicy -All -ErrorAction Stop |
-            ForEach-Object {
-                $assignments = @()
-                try {
-                    $assignments = @(Get-MgDeviceManagementDeviceCompliancePolicyAssignment `
-                        -DeviceCompliancePolicyId $_.Id -ErrorAction SilentlyContinue |
-                        ForEach-Object {
-                            [PSCustomObject]@{
-                                TargetType = $_.Target.AdditionalProperties.'@odata.type'
-                                GroupId    = $_.Target.AdditionalProperties.groupId
-                            }
-                        })
-                }
-                catch {
-                    Write-Verbose "Could not get compliance policy assignments: $_"
-                }
+        Write-Host "        Fetching compliance policies..." -ForegroundColor Gray
+        $uri = 'https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies?$expand=assignments&$top=999'
+        $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
 
+        $allPolicies = @($response.value)
+        while ($response.'@odata.nextLink') {
+            $response = Invoke-MgGraphRequest -Uri $response.'@odata.nextLink' -Method GET -ErrorAction Stop
+            $allPolicies += $response.value
+        }
+
+        Write-Host "        Processing $($allPolicies.Count) compliance policies..." -ForegroundColor Gray
+
+        $compliancePolicies = @(foreach ($policy in $allPolicies) {
+            $assignments = @($policy.assignments | Where-Object { $_ } | ForEach-Object {
                 [PSCustomObject]@{
-                    Id          = $_.Id
-                    DisplayName = $_.DisplayName
-                    Description = $_.Description
-                    OdataType   = $_.AdditionalProperties.'@odata.type'
-                    Assignments = $assignments
+                    TargetType = $_.target.'@odata.type'
+                    GroupId    = $_.target.groupId
                 }
             })
+
+            [PSCustomObject]@{
+                Id          = $policy.id
+                DisplayName = $policy.displayName
+                Description = $policy.description
+                OdataType   = $policy.'@odata.type'
+                Assignments = $assignments
+            }
+        })
 
         Write-Verbose "Retrieved $($compliancePolicies.Count) compliance policies."
     }
@@ -142,35 +146,35 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
         Write-Warning "Failed to retrieve compliance policies: $_"
     }
 
-    # --- 5. Get Settings Catalog policies (beta endpoint) ---
+    # --- 5. Get Settings Catalog policies (beta endpoint with $expand) ---
     $settingsCatalog = @()
     try {
-        $uri = 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies?$top=999'
+        Write-Host "        Fetching Settings Catalog policies..." -ForegroundColor Gray
+        $uri = 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies?$expand=assignments&$top=999'
         $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
 
-        $settingsCatalog = @($response.value | ForEach-Object {
-            # Get assignments
-            $assignments = @()
-            try {
-                $assignUri = "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies/$($_.id)/assignments"
-                $assignResponse = Invoke-MgGraphRequest -Uri $assignUri -Method GET -ErrorAction SilentlyContinue
-                $assignments = @($assignResponse.value | ForEach-Object {
-                    [PSCustomObject]@{
-                        TargetType = $_.target.'@odata.type'
-                        GroupId    = $_.target.groupId
-                    }
-                })
-            }
-            catch {
-                Write-Verbose "Could not get Settings Catalog assignments: $_"
-            }
+        $allCatalog = @($response.value)
+        while ($response.'@odata.nextLink') {
+            $response = Invoke-MgGraphRequest -Uri $response.'@odata.nextLink' -Method GET -ErrorAction Stop
+            $allCatalog += $response.value
+        }
+
+        Write-Host "        Processing $($allCatalog.Count) Settings Catalog policies..." -ForegroundColor Gray
+
+        $settingsCatalog = @(foreach ($policy in $allCatalog) {
+            $assignments = @($policy.assignments | Where-Object { $_ } | ForEach-Object {
+                [PSCustomObject]@{
+                    TargetType = $_.target.'@odata.type'
+                    GroupId    = $_.target.groupId
+                }
+            })
 
             [PSCustomObject]@{
-                Id           = $_.id
-                Name         = $_.name
-                Description  = $_.description
-                Platforms    = $_.platforms
-                Technologies = $_.technologies
+                Id           = $policy.id
+                Name         = $policy.name
+                Description  = $policy.description
+                Platforms    = $policy.platforms
+                Technologies = $policy.technologies
                 Assignments  = $assignments
             }
         })
