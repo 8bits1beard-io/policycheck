@@ -7,7 +7,7 @@ function Get-DeviceAppAssignments {
         including Win32 apps, LOB apps, Microsoft Store apps, and web apps.
         Requires an active Microsoft Graph connection (call after Connect-MgGraph).
     .PARAMETER GraphConnected
-        Indicates Graph is already connected (called from Invoke-PolicyCheck).
+        Indicates Graph is already connected (called from Invoke-PolicyLens).
     .OUTPUTS
         PSCustomObject with app assignment details.
     #>

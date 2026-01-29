@@ -143,7 +143,7 @@ function Get-MDMPolicyData {
     $diagPath = $null
 
     if (-not $SkipMDMDiag -and $isEnrolled) {
-        $diagFolder = Join-Path $env:TEMP "PolicyCheck_MDMDiag_$(Get-Random)"
+        $diagFolder = Join-Path $env:TEMP "PolicyLens_MDMDiag_$(Get-Random)"
         try {
             New-Item -Path $diagFolder -ItemType Directory -Force | Out-Null
             $diagCab = Join-Path $diagFolder 'mdmdiag.cab'

@@ -1,11 +1,12 @@
-# PolicyCheck
+# PolicyLens
 
-GPO & Intune policy scanner for Windows devices. Identifies applied Group Policies and MDM/Intune policies, analyzes overlap, and exports results to JSON for the web viewer tool to assist with GPO-to-Intune migration.
+GPO, Intune & SCCM policy scanner for Windows devices. Provides visibility into policies from all management sources, analyzes overlap, and exports results to JSON for the web viewer tool.
 
 ## What It Does
 
 - **Group Policy**: Enumerates all applied GPOs (computer & user) via `gpresult` and scans registry-based policy keys
 - **MDM/Intune**: Reads MDM enrollment status and applied policies from `PolicyManager` registry keys
+- **SCCM/ConfigMgr**: Collects applications, compliance baselines, software updates, and client settings
 - **Overlap Analysis**: Cross-references GPO settings against their Intune CSP equivalents using a built-in mapping file
 - **App Assignments** (Graph): Lists Intune app assignments (Win32, LOB, Store, WinGet, etc.)
 - **Group Memberships** (Graph): Shows Azure AD groups the device belongs to (drives policy/app targeting)
@@ -27,19 +28,19 @@ Install-Module Microsoft.Graph -Scope CurrentUser
 
 ```powershell
 # Basic local scan
-.\PolicyCheck.ps1
+.\PolicyLens.ps1
 
 # Full scan with Graph API (opens browser for auth)
-.\PolicyCheck.ps1 -IncludeGraph
+.\PolicyLens.ps1 -IncludeGraph
 
 # Full scan with specific tenant
-.\PolicyCheck.ps1 -IncludeGraph -TenantId "contoso.onmicrosoft.com"
+.\PolicyLens.ps1 -IncludeGraph -TenantId "contoso.onmicrosoft.com"
 
 # Skip MDM diagnostics tool (faster)
-.\PolicyCheck.ps1 -SkipMDMDiag
+.\PolicyLens.ps1 -SkipMDMDiag
 
 # Export to specific path
-.\PolicyCheck.ps1 -OutputPath "C:\Reports\device1.json"
+.\PolicyLens.ps1 -OutputPath "C:\Reports\device1.json"
 ```
 
 ## Parameters
@@ -65,40 +66,42 @@ When using `-IncludeGraph`, the tool requests these Microsoft Graph scopes via i
 
 ## Web Viewer Tool
 
-PolicyCheck includes a standalone HTML viewer (`Tools/PolicyCheckViewer.html`) that lets you visualize and compare JSON exports from multiple devices.
+PolicyLens includes a standalone HTML viewer (`Tools/PolicyLensViewer.html`) that lets you visualize and compare JSON exports from multiple devices.
 
 **How to use:**
 
-1. Run PolicyCheck on each device you want to analyze
+1. Run PolicyLens on each device you want to analyze
 2. Copy the JSON files to a central location
-3. Open `PolicyCheckViewer.html` in a web browser (no server required, runs locally)
+3. Open `PolicyLensViewer.html` in a web browser (no server required, runs locally)
 4. Load one or more JSON exports to view device policies side-by-side
 
 The web viewer displays all policy data sections and enables comparison across devices to identify configuration differences:
 - **Summary Cards** - At-a-glance counts for GPOs, MDM settings, matches, conflicts, and migration candidates
 - **Applied Group Policies** - All GPOs with scope, link location, and link order
 - **MDM Enrollment** - Enrollment provider, UPN, and tenant details
+- **SCCM/ConfigMgr** - Applications, compliance baselines, and software updates
 - **Overlap Analysis** - Color-coded table with search/filter:
   - **Green**: Setting configured in both GPO and Intune, values match
   - **Red**: Setting in both, values conflict
   - **Cyan**: GPO-only, Intune mapping exists (migration candidate)
-  - **Magenta**: GPO-only, no known Intune equivalent
+  - **Magenta**: GPO-only, unknown mapping status
 - **Azure AD Groups** - Device group memberships (dynamic vs assigned)
-- **App Assignments** - Intune apps with assignment intent and targets
-- **Intune Profiles** - Configuration profiles and Settings Catalog policies
+- **App Assignments** - Intune apps assigned to this device via group membership
+- **Intune Profiles** - Configuration profiles and Settings Catalog policies assigned to this device
 - **MDM Policy Details** - Full list of PolicyManager CSP settings
 - **GPO Registry Details** - All scanned registry policy entries
 
 ## Module Usage
 
-You can also import PolicyCheck as a PowerShell module and use individual functions:
+You can also import PolicyLens as a PowerShell module and use individual functions:
 
 ```powershell
-Import-Module .\PolicyCheck.psd1
+Import-Module .\PolicyLens.psd1
 
 # Collect data individually
 $gpo = Get-GPOPolicyData
 $mdm = Get-MDMPolicyData
+$sccm = Get-SCCMPolicyData
 $analysis = Compare-PolicyOverlap -GPOData $gpo -MDMData $mdm
 
 # Access analysis results programmatically

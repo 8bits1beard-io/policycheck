@@ -1,16 +1,16 @@
 function ConvertTo-JsonExport {
     <#
     .SYNOPSIS
-        Converts PolicyCheck results to a structured JSON export file.
+        Converts PolicyLens results to a structured JSON export file.
 
     .DESCRIPTION
-        This function takes the output from Invoke-PolicyCheck and exports it to a JSON file
+        This function takes the output from Invoke-PolicyLens and exports it to a JSON file
         with a standardized schema. The export includes device metadata, all policy data sections,
         and analysis results. Device information is collected automatically including computer name,
         OS version, and domain/Azure AD join status.
 
     .PARAMETER Result
-        The PSCustomObject returned from Invoke-PolicyCheck containing policy scan results.
+        The PSCustomObject returned from Invoke-PolicyLens containing policy scan results.
         This object should contain gpoData, mdmData, graphData, appData, groupData, and analysis properties.
 
     .PARAMETER OutputPath
@@ -22,13 +22,13 @@ function ConvertTo-JsonExport {
         Returns the resolved absolute path to the created JSON file.
 
     .EXAMPLE
-        $result = Invoke-PolicyCheck -IncludeGPO -IncludeMDM
+        $result = Invoke-PolicyLens -IncludeGPO -IncludeMDM
         $exportPath = ConvertTo-JsonExport -Result $result -OutputPath "C:\Reports\policy-export.json"
 
         Exports the policy check results to a JSON file and returns the full path.
 
     .EXAMPLE
-        Invoke-PolicyCheck -All | ConvertTo-JsonExport -OutputPath ".\export.json"
+        Invoke-PolicyLens -All | ConvertTo-JsonExport -OutputPath ".\export.json"
 
         Pipes policy check results directly to the export function.
     #>
@@ -88,7 +88,7 @@ function ConvertTo-JsonExport {
         $exportObject = [ordered]@{
             schemaVersion = "1.0"
             exportedAt    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-            exportedBy    = "PolicyCheck v1.0.0"
+            exportedBy    = "PolicyLens v1.0.0"
             device        = $deviceInfo
             gpoData       = if ($Result.PSObject.Properties['GPOData']) { $Result.GPOData } else { $null }
             mdmData       = if ($Result.PSObject.Properties['MDMData']) { $Result.MDMData } else { $null }

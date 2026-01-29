@@ -18,7 +18,7 @@ function Get-GPOPolicyData {
     $computerGpos = @()
     $userGpos = @()
     $gpresultXml = $null
-    $tempXml = Join-Path $env:TEMP "PolicyCheck_gpresult_$(Get-Random).xml"
+    $tempXml = Join-Path $env:TEMP "PolicyLens_gpresult_$(Get-Random).xml"
 
     try {
         $proc = Start-Process -FilePath 'gpresult.exe' `

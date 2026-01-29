@@ -1,7 +1,7 @@
 function Write-ConsoleSummary {
     <#
     .SYNOPSIS
-        Formats and displays the PolicyCheck analysis results to the console.
+        Formats and displays the PolicyLens analysis results to the console.
     #>
     [CmdletBinding()]
     param(

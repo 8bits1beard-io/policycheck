@@ -1,9 +1,9 @@
-function Write-PolicyCheckLog {
+function Write-PolicyLensLog {
     <#
     .SYNOPSIS
-        Writes operational log entries for PolicyCheck.
+        Writes operational log entries for PolicyLens.
     .DESCRIPTION
-        Appends timestamped log entries to the PolicyCheck log file.
+        Appends timestamped log entries to the PolicyLens log file.
         Used for operational tracking of script execution, not device data.
     .PARAMETER Message
         The log message to write.

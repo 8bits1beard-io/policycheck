@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PolicyCheck Viewer</title>
+    <title>PolicyLens Viewer</title>
     <style>
         :root {
             --bg-primary: #1e1e2e;
@@ -802,7 +802,7 @@
 </head>
 <body>
     <div class="nav-bar">
-        <h1>PolicyCheck Viewer</h1>
+        <h1>PolicyLens Viewer</h1>
         <div class="nav-actions">
             <button class="btn btn-secondary" onclick="showView('upload')" id="nav-upload">Upload Files</button>
             <button class="btn btn-secondary" onclick="showView('single')" id="nav-single" disabled>Single View</button>
@@ -813,7 +813,7 @@
     <!-- Upload View -->
     <div id="view-upload" class="view active">
         <div class="welcome-panel">
-            <h2>Welcome to PolicyCheck Viewer</h2>
+            <h2>Welcome to PolicyLens Viewer</h2>
             <p>This tool helps Windows Engineers plan GPO-to-Intune migration by analyzing policy overlap on Windows devices.</p>
             <ul>
                 <li>See all GPO registry policies and MDM settings on a device</li>
@@ -824,7 +824,7 @@
         </div>
         <input type="file" id="file-input" accept=".json" multiple style="position: absolute; left: -9999px;">
         <div class="drop-zone" id="drop-zone">
-            <h2>Drop PolicyCheck JSON Files Here</h2>
+            <h2>Drop PolicyLens JSON Files Here</h2>
             <p>or click to select files</p>
             <label for="file-input" class="btn" style="margin-top: 15px; display: inline-block; cursor: pointer;">Browse Files</label>
         </div>
@@ -853,7 +853,7 @@
     </div>
 
     <div class="report-footer">
-        PolicyCheck Viewer - View and compare policy exports
+        PolicyLens Viewer - View and compare policy exports
     </div>
 
     <script>

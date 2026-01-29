@@ -7,7 +7,7 @@ function Get-DeviceGroupMemberships {
         This helps identify which Intune policies and apps target this device.
         Requires an active Microsoft Graph connection.
     .PARAMETER GraphConnected
-        Indicates Graph is already connected (called from Invoke-PolicyCheck).
+        Indicates Graph is already connected (called from Invoke-PolicyLens).
     .OUTPUTS
         PSCustomObject with device identity and group membership details.
     #>

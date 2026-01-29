@@ -4,19 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PolicyCheck is a PowerShell module that scans Windows devices for applied Group Policy (GPO) and Intune/MDM policies, analyzes overlap between them, and exports results to JSON for the web viewer tool to assist with GPO-to-Intune migration.
+PolicyLens is a PowerShell module that scans Windows devices for applied Group Policy (GPO), Intune/MDM policies, and SCCM/ConfigMgr configurations. It analyzes overlap between policy sources and exports results to JSON for the web viewer tool to assist with GPO-to-Intune migration.
 
 ## Running the Tool
 
 ```powershell
 # Basic local scan (using wrapper script)
-.\PolicyCheck.ps1
+.\PolicyLens.ps1
 
 # With Graph API (Intune profiles, apps, groups)
-.\PolicyCheck.ps1 -IncludeGraph
+.\PolicyLens.ps1 -IncludeGraph
 
 # Export to specific path
-.\PolicyCheck.ps1 -OutputPath "C:\Reports\device1.json"
+.\PolicyLens.ps1 -OutputPath "C:\Reports\device1.json"
 ```
 
 Requires Windows 10/11 and PowerShell 5.1+. Run as Administrator for full results.
@@ -24,13 +24,14 @@ Requires Windows 10/11 and PowerShell 5.1+. Run as Administrator for full result
 ## Module Architecture
 
 **Entry Points:**
-- `PolicyCheck.ps1` - Standalone script wrapper that imports the module and runs `Invoke-PolicyCheck`
-- `PolicyCheck.psd1` / `PolicyCheck.psm1` - Module manifest and loader (dot-sources Public/ and Private/ scripts)
+- `PolicyLens.ps1` - Standalone script wrapper that imports the module and runs `Invoke-PolicyLens`
+- `PolicyLens.psd1` / `PolicyLens.psm1` - Module manifest and loader (dot-sources Public/ and Private/ scripts)
 
 **Public Functions** (exported, in `Public/`):
-- `Invoke-PolicyCheck` - Main orchestrator that runs all phases and exports JSON
+- `Invoke-PolicyLens` - Main orchestrator that runs all phases and exports JSON
 - `Get-GPOPolicyData` - Collects GPO data via gpresult and registry scanning
 - `Get-MDMPolicyData` - Reads MDM enrollment and PolicyManager registry keys
+- `Get-SCCMPolicyData` - Collects SCCM client data via WMI
 - `Get-GraphPolicyData` - Fetches Intune profiles via Microsoft Graph
 - `Get-DeviceAppAssignments` - Gets Intune app assignments via Graph
 - `Get-DeviceGroupMemberships` - Gets Azure AD group memberships via Graph
@@ -39,10 +40,10 @@ Requires Windows 10/11 and PowerShell 5.1+. Run as Administrator for full result
 **Private Functions** (internal, in `Private/`):
 - `ConvertTo-JsonExport` - Exports results to JSON for the web viewer tool
 - `Write-ConsoleSummary` - Outputs color-coded summary to console
-- `Merge-PolicyData` - Helper for combining policy data
+- `Write-PolicyLensLog` - Writes operational log entries
 
 **Data Flow:**
-1. `Invoke-PolicyCheck` calls data collection functions (GPO, MDM, optionally Graph)
+1. `Invoke-PolicyLens` calls data collection functions (GPO, MDM, SCCM, optionally Graph)
 2. `Compare-PolicyOverlap` analyzes settings using `Config/SettingsMap.psd1` mapping
 3. Results flow to `Write-ConsoleSummary` and `ConvertTo-JsonExport`
 
@@ -51,7 +52,7 @@ Requires Windows 10/11 and PowerShell 5.1+. Run as Administrator for full result
 | Path | Purpose |
 |------|---------|
 | `Config/SettingsMap.psd1` | GPO-to-Intune CSP mapping definitions (extensible) |
-| `Tools/PolicyCheckViewer.html` | Self-contained web viewer for JSON exports |
+| `Tools/PolicyLensViewer.html` | Self-contained web viewer for JSON exports |
 
 ## Extending the Settings Map
 
@@ -71,5 +72,5 @@ Add entries to `Config/SettingsMap.psd1`:
 
 ## Output Formats
 
-- **JSON Export** - Always generated, view with `Tools/PolicyCheckViewer.html`
+- **JSON Export** - Always generated, view with `Tools/PolicyLensViewer.html`
 - **PSCustomObject** - Returned to pipeline for programmatic access

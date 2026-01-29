@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    PolicyCheck - GPO & Intune Policy Scanner
+    PolicyLens - GPO, Intune & SCCM Policy Scanner
 .DESCRIPTION
-    Scans the local Windows device for applied Group Policies and Intune/MDM policies.
-    Analyzes overlap between GPO and MDM settings, identifies migration candidates,
+    Scans the local Windows device for applied Group Policies, Intune/MDM policies,
+    and SCCM configurations. Provides visibility into policy sources, analyzes overlap,
     and exports results to JSON for the web viewer tool.
 .PARAMETER IncludeGraph
     Connect to Microsoft Graph API to retrieve Intune profile metadata,
@@ -15,15 +15,15 @@
 .PARAMETER OutputPath
     Path for the JSON export file. Defaults to a timestamped file in the current directory.
 .PARAMETER LogPath
-    Path for the operational log file. Defaults to PolicyCheck.log in LocalAppData.
+    Path for the operational log file. Defaults to PolicyLens.log in LocalAppData.
 .EXAMPLE
-    .\PolicyCheck.ps1
+    .\PolicyLens.ps1
     Runs a local-only scan and exports results to JSON.
 .EXAMPLE
-    .\PolicyCheck.ps1 -IncludeGraph
+    .\PolicyLens.ps1 -IncludeGraph
     Runs a full scan with Graph API queries (browser auth prompt).
 .EXAMPLE
-    .\PolicyCheck.ps1 -OutputPath "C:\Reports\device1.json"
+    .\PolicyLens.ps1 -OutputPath "C:\Reports\device1.json"
     Runs a local scan and exports results to a specific path.
 #>
 [CmdletBinding()]
@@ -39,7 +39,7 @@ param(
 Add-Type -AssemblyName System.Web -ErrorAction SilentlyContinue
 
 # Import the module from the script's directory
-Import-Module "$PSScriptRoot\PolicyCheck.psd1" -Force
+Import-Module "$PSScriptRoot\PolicyLens.psd1" -Force
 
 # Build parameters, excluding empty ones
 $params = @{}
@@ -49,4 +49,4 @@ if ($SkipMDMDiag) { $params['SkipMDMDiag'] = $true }
 if ($OutputPath) { $params['OutputPath'] = $OutputPath }
 if ($LogPath) { $params['LogPath'] = $LogPath }
 
-Invoke-PolicyCheck @params
+Invoke-PolicyLens @params
