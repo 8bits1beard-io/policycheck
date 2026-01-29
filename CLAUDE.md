@@ -9,14 +9,15 @@ PolicyCheck is a PowerShell module that scans Windows devices for applied Group 
 ## Running the Tool
 
 ```powershell
-# Basic local scan
+# Basic local scan (using wrapper script)
 .\PolicyCheck.ps1
 
 # With Graph API (Intune profiles, apps, groups)
 .\PolicyCheck.ps1 -IncludeGraph
 
-# Export JSON for web viewer
-.\PolicyCheck.ps1 -ExportJson
+# Using the module directly (supports all parameters)
+Import-Module .\PolicyCheck.psd1
+Invoke-PolicyCheck -ExportJson
 ```
 
 Requires Windows 10/11 and PowerShell 5.1+. Run as Administrator for full results.

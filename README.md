@@ -37,6 +37,9 @@ Install-Module Microsoft.Graph -Scope CurrentUser
 
 # Skip MDM diagnostics tool (faster)
 .\PolicyCheck.ps1 -SkipMDMDiag
+
+# Export results to JSON for the web viewer
+.\PolicyCheck.ps1 -ExportJson -JsonPath "C:\Reports\device1.json"
 ```
 
 ## Parameters
@@ -47,6 +50,8 @@ Install-Module Microsoft.Graph -Scope CurrentUser
 | `-TenantId` | String | Azure AD tenant ID or domain (e.g., `contoso.onmicrosoft.com`) |
 | `-OutputPath` | String | HTML report file path (default: timestamped file in current directory) |
 | `-SkipMDMDiag` | Switch | Skip `mdmdiagnosticstool` execution |
+| `-ExportJson` | Switch | Export results to a JSON file for use with the PolicyCheck Viewer web tool |
+| `-JsonPath` | String | JSON export file path (default: timestamped file with computer name in current directory) |
 
 ## Graph API Permissions
 
@@ -111,6 +116,19 @@ The GPO-to-Intune mapping is stored in `Config/SettingsMap.psd1`. Add entries fo
     )
 }
 ```
+
+## Web Viewer Tool
+
+PolicyCheck includes a standalone HTML viewer (`Tools/PolicyCheckViewer.html`) that lets you visualize and compare JSON exports from multiple devices.
+
+**How to use:**
+
+1. Run PolicyCheck with the `-ExportJson` parameter on each device you want to analyze
+2. Copy the JSON files to a central location
+3. Open `PolicyCheckViewer.html` in a web browser (no server required, runs locally)
+4. Load one or more JSON exports to view device policies side-by-side
+
+The web viewer displays all policy data sections with the same formatting as the HTML report and enables comparison across devices to identify configuration differences.
 
 ## Limitations
 
