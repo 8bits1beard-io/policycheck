@@ -13,6 +13,7 @@
         'Get-DeviceAppAssignments'
         'Get-DeviceGroupMemberships'
         'Compare-PolicyOverlap'
+        'Get-SCCMPolicyData'
     )
     CmdletsToExport   = @()
     VariablesToExport  = @()

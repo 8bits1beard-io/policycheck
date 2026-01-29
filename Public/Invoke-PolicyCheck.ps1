@@ -107,6 +107,28 @@ function Invoke-PolicyCheck {
         throw
     }
 
+    # --- Phase 2.5: Collect SCCM data ---
+    Write-Host "  [2.5/5] Collecting SCCM/ConfigMgr data..." -ForegroundColor White
+    Write-PolicyCheckLog "Phase 2.5: SCCM collection started" -Level Info
+    $sccmData = $null
+    try {
+        $sccmData = Get-SCCMPolicyData
+        if ($sccmData.IsInstalled) {
+            $appCount = $sccmData.Applications.Count
+            $baselineCount = $sccmData.Baselines.Count
+            Write-Host "        SCCM client installed. $appCount apps, $baselineCount baselines" -ForegroundColor Gray
+            Write-PolicyCheckLog "Phase 2.5: SCCM collection complete ($appCount apps, $baselineCount baselines)" -Level Info
+        }
+        else {
+            Write-Host "        SCCM client not installed" -ForegroundColor DarkGray
+            Write-PolicyCheckLog "Phase 2.5: SCCM client not installed" -Level Info
+        }
+    }
+    catch {
+        Write-PolicyCheckLog "Phase 2.5: SCCM collection failed - $_" -Level Warning
+        Write-Host "        Could not collect SCCM data: $_" -ForegroundColor Yellow
+    }
+
     # --- Phase 3: Optionally collect Graph data ---
     $graphData = $null
     $appData = $null
@@ -217,6 +239,7 @@ function Invoke-PolicyCheck {
     $result = [PSCustomObject]@{
         GPOData   = $gpoData
         MDMData   = $mdmData
+        SCCMData  = $sccmData
         GraphData = $graphData
         AppData   = $appData
         GroupData = $groupData

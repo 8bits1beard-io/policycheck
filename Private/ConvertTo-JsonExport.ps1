@@ -92,6 +92,7 @@ function ConvertTo-JsonExport {
             device        = $deviceInfo
             gpoData       = if ($Result.PSObject.Properties['GPOData']) { $Result.GPOData } else { $null }
             mdmData       = if ($Result.PSObject.Properties['MDMData']) { $Result.MDMData } else { $null }
+            sccmData      = if ($Result.PSObject.Properties['SCCMData']) { $Result.SCCMData } else { $null }
             graphData     = if ($Result.PSObject.Properties['GraphData']) { $Result.GraphData } else { $null }
             appData       = if ($Result.PSObject.Properties['AppData']) { $Result.AppData } else { $null }
             groupData     = if ($Result.PSObject.Properties['GroupData']) { $Result.GroupData } else { $null }
