@@ -1523,36 +1523,145 @@
 
         function renderAppsSection(device) {
             const appData = device.appData;
-            if (!appData?.Available || !appData?.AssignedApps?.length) {
+            if (!appData?.Available) {
                 return '';
             }
 
-            const apps = appData.AssignedApps;
+            const groupData = device.groupData;
+            const deviceGroupIds = getDeviceGroupIds(groupData);
+            const allApps = appData.AssignedApps || [];
+            const totalAppsInTenant = appData.Apps?.length || 0;
+
+            // Filter apps to only those assigned to this device
+            const applicableApps = allApps.filter(app => appAppliesToDevice(app, deviceGroupIds));
+
+            const hasGroupData = groupData?.Available && groupData?.DeviceFound && deviceGroupIds.length > 0;
+
+            // Separate by intent
+            const requiredApps = applicableApps.filter(app =>
+                (app.Assignments || []).some(a =>
+                    a.Intent === 'Required' && assignmentAppliesToDevice(a, deviceGroupIds)
+                )
+            );
+            const availableApps = applicableApps.filter(app =>
+                (app.Assignments || []).some(a =>
+                    a.Intent === 'Available' && assignmentAppliesToDevice(a, deviceGroupIds)
+                ) && !requiredApps.includes(app)
+            );
+
+            if (applicableApps.length === 0 && hasGroupData) {
+                return `
+                    <div class="section">
+                        <div class="section-header collapsed">
+                            <h2>Intune App Assignments (0 of ${allApps.length})</h2>
+                            <span class="toggle">&#9660;</span>
+                        </div>
+                        <div class="section-body hidden">
+                            <div class="info-box info">
+                                No Intune apps are assigned to this device or its ${deviceGroupIds.length} groups.
+                                (${totalAppsInTenant} apps exist in tenant, ${allApps.length} have assignments)
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Build info message
+            let infoMessage = '';
+            if (!hasGroupData) {
+                infoMessage = `
+                    <div class="info-box warning">
+                        Cannot filter apps - device group membership data not available.
+                        Showing all ${allApps.length} assigned apps from tenant.
+                    </div>
+                `;
+            } else {
+                infoMessage = `
+                    <div class="info-box explanation">
+                        Showing <strong>${applicableApps.length} of ${allApps.length}</strong> assigned apps that apply to this device.
+                        (${totalAppsInTenant} total apps in tenant)
+                    </div>
+                `;
+            }
+
+            const appsToShow = hasGroupData ? applicableApps : allApps;
+
             return `
                 <div class="section">
                     <div class="section-header collapsed">
-                        <h2>Intune App Assignments (${apps.length} assigned)</h2>
+                        <h2>Intune App Assignments (${hasGroupData ? applicableApps.length + ' of ' + allApps.length : allApps.length + ' assigned'})</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
-                        <div class="info-box explanation">
-                            Applications deployed via Microsoft Intune. Shows apps assigned to this device or its groups.
-                        </div>
-                        <div class="info-box info">Total apps in tenant: ${appData.Apps?.length || 0} | Assigned to this device: ${apps.length}</div>
-                        ${apps.map(app => {
-                            const intents = (app.Assignments || []).map(a => {
-                                const intentClass = a.Intent?.toLowerCase() === 'required' ? 'required' : 'available';
-                                return `<span class="app-intent ${intentClass}">${escapeHtml(a.Intent || '')} - ${escapeHtml(a.TargetType || '')}</span>`;
-                            }).join(' ');
-                            return `
-                                <div class="app-card">
-                                    <div class="app-name">${escapeHtml(app.DisplayName || 'Unknown App')}</div>
-                                    <div class="app-type">${escapeHtml(app.AppType || '')} ${app.Publisher ? '- ' + escapeHtml(app.Publisher) : ''}</div>
-                                    ${intents}
-                                </div>
-                            `;
-                        }).join('')}
+                        ${infoMessage}
+                        ${requiredApps.length > 0 ? `
+                            <h3 style="margin: 15px 0 10px; color: var(--accent-yellow);">Required Apps (${requiredApps.length})</h3>
+                            ${requiredApps.map(app => renderAppCard(app, deviceGroupIds, groupData)).join('')}
+                        ` : ''}
+                        ${availableApps.length > 0 ? `
+                            <h3 style="margin: 15px 0 10px; color: var(--accent-green);">Available Apps (${availableApps.length})</h3>
+                            ${availableApps.map(app => renderAppCard(app, deviceGroupIds, groupData)).join('')}
+                        ` : ''}
+                        ${!hasGroupData ? appsToShow.map(app => renderAppCard(app, deviceGroupIds, groupData)).join('') : ''}
                     </div>
+                </div>
+            `;
+        }
+
+        // Check if an app applies to the device
+        function appAppliesToDevice(app, deviceGroupIds) {
+            const assignments = app.Assignments || [];
+            return assignments.some(a => assignmentAppliesToDevice(a, deviceGroupIds));
+        }
+
+        // Check if a single assignment applies to the device
+        function assignmentAppliesToDevice(assignment, deviceGroupIds) {
+            const targetType = assignment.TargetType || '';
+            const groupId = assignment.GroupId;
+
+            // "All Devices" or "All Users" applies to everyone
+            if (targetType === 'All Devices' || targetType === 'All Users') {
+                return true;
+            }
+
+            // Group-based assignment - check if device is in that group
+            if (targetType.startsWith('Group:') && groupId && deviceGroupIds.includes(groupId)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        // Render a single app card
+        function renderAppCard(app, deviceGroupIds, groupData) {
+            const applicableAssignments = (app.Assignments || []).filter(a =>
+                assignmentAppliesToDevice(a, deviceGroupIds)
+            );
+
+            const assignmentBadges = applicableAssignments.map(a => {
+                const intentClass = a.Intent?.toLowerCase() === 'required' ? 'required' : 'available';
+                let targetLabel = '';
+
+                if (a.TargetType === 'All Devices') {
+                    targetLabel = '<span class="status-tag both-match">All Devices</span>';
+                } else if (a.TargetType === 'All Users') {
+                    targetLabel = '<span class="status-tag migration-ready">All Users</span>';
+                } else if (a.GroupId && groupData?.Groups) {
+                    const group = groupData.Groups.find(g => g.Id === a.GroupId);
+                    const groupName = group?.DisplayName || 'Group';
+                    targetLabel = `<span class="status-tag mdm-only">${escapeHtml(groupName)}</span>`;
+                } else {
+                    targetLabel = `<span class="status-tag">${escapeHtml(a.TargetType || '')}</span>`;
+                }
+
+                return `<span class="app-intent ${intentClass}">${escapeHtml(a.Intent || '')}</span> ${targetLabel}`;
+            }).join(' ');
+
+            return `
+                <div class="app-card">
+                    <div class="app-name">${escapeHtml(app.DisplayName || 'Unknown App')}</div>
+                    <div class="app-type">${escapeHtml(app.AppType || '')} ${app.Publisher ? '- ' + escapeHtml(app.Publisher) : ''}</div>
+                    <div style="margin-top: 6px;">${assignmentBadges}</div>
                 </div>
             `;
         }
