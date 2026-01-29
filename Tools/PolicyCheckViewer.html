@@ -1060,18 +1060,18 @@
                                             statusText = 'No Mapping';
                                         }
 
-                                        const mdmSetting = o.MDMArea && o.MDMSetting ? \`\${o.MDMArea}/\${o.MDMSetting}\` : '-';
+                                        const mdmSetting = o.MDMArea && o.MDMSetting ? `${o.MDMArea}/${o.MDMSetting}` : '-';
 
-                                        return \`
-                                            <tr class="\${rowClass}" data-status="\${o.Status}">
-                                                <td><span class="status-tag \${statusClass}">\${statusText}</span></td>
-                                                <td>\${escapeHtml(o.Category || '-')}</td>
-                                                <td>\${escapeHtml(o.GPOValueName || '-')}</td>
-                                                <td>\${escapeHtml(formatValue(o.GPOValue))}</td>
-                                                <td>\${escapeHtml(mdmSetting)}</td>
-                                                <td>\${escapeHtml(formatValue(o.MDMValue))}</td>
+                                        return `
+                                            <tr class="${rowClass}" data-status="${o.Status}">
+                                                <td><span class="status-tag ${statusClass}">${statusText}</span></td>
+                                                <td>${escapeHtml(o.Category || '-')}</td>
+                                                <td>${escapeHtml(o.GPOValueName || '-')}</td>
+                                                <td>${escapeHtml(formatValue(o.GPOValue))}</td>
+                                                <td>${escapeHtml(mdmSetting)}</td>
+                                                <td>${escapeHtml(formatValue(o.MDMValue))}</td>
                                             </tr>
-                                        \`;
+                                        `;
                                     }).join('')}
                                 </tbody>
                             </table>
@@ -1099,15 +1099,15 @@
                         ${apps.map(app => {
                             const intents = (app.Assignments || []).map(a => {
                                 const intentClass = a.Intent?.toLowerCase() === 'required' ? 'required' : 'available';
-                                return \`<span class="app-intent \${intentClass}">\${escapeHtml(a.Intent || '')} - \${escapeHtml(a.TargetType || '')}</span>\`;
+                                return `<span class="app-intent ${intentClass}">${escapeHtml(a.Intent || '')} - ${escapeHtml(a.TargetType || '')}</span>`;
                             }).join(' ');
-                            return \`
+                            return `
                                 <div class="app-card">
-                                    <div class="app-name">\${escapeHtml(app.DisplayName || 'Unknown App')}</div>
-                                    <div class="app-type">\${escapeHtml(app.AppType || '')} \${app.Publisher ? '- ' + escapeHtml(app.Publisher) : ''}</div>
-                                    \${intents}
+                                    <div class="app-name">${escapeHtml(app.DisplayName || 'Unknown App')}</div>
+                                    <div class="app-type">${escapeHtml(app.AppType || '')} ${app.Publisher ? '- ' + escapeHtml(app.Publisher) : ''}</div>
+                                    ${intents}
                                 </div>
-                            \`;
+                            `;
                         }).join('')}
                     </div>
                 </div>
@@ -1129,24 +1129,24 @@
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
-                        ${deviceInfo ? \`
+                        ${deviceInfo ? `
                             <div class="enrollment-grid">
-                                <div class="enrollment-item"><div class="key">Display Name</div><div class="value">\${escapeHtml(deviceInfo.DisplayName || '-')}</div></div>
-                                <div class="enrollment-item"><div class="key">Device ID</div><div class="value">\${escapeHtml(deviceInfo.DeviceId || '-')}</div></div>
-                                <div class="enrollment-item"><div class="key">OS</div><div class="value">\${escapeHtml(deviceInfo.OperatingSystem || '')} \${escapeHtml(deviceInfo.OSVersion || '')}</div></div>
-                                <div class="enrollment-item"><div class="key">Trust Type</div><div class="value">\${escapeHtml(deviceInfo.TrustType || '-')}</div></div>
-                                <div class="enrollment-item"><div class="key">Managed</div><div class="value">\${deviceInfo.IsManaged || '-'}</div></div>
-                                <div class="enrollment-item"><div class="key">Compliant</div><div class="value">\${deviceInfo.IsCompliant || '-'}</div></div>
+                                <div class="enrollment-item"><div class="key">Display Name</div><div class="value">${escapeHtml(deviceInfo.DisplayName || '-')}</div></div>
+                                <div class="enrollment-item"><div class="key">Device ID</div><div class="value">${escapeHtml(deviceInfo.DeviceId || '-')}</div></div>
+                                <div class="enrollment-item"><div class="key">OS</div><div class="value">${escapeHtml(deviceInfo.OperatingSystem || '')} ${escapeHtml(deviceInfo.OSVersion || '')}</div></div>
+                                <div class="enrollment-item"><div class="key">Trust Type</div><div class="value">${escapeHtml(deviceInfo.TrustType || '-')}</div></div>
+                                <div class="enrollment-item"><div class="key">Managed</div><div class="value">${deviceInfo.IsManaged || '-'}</div></div>
+                                <div class="enrollment-item"><div class="key">Compliant</div><div class="value">${deviceInfo.IsCompliant || '-'}</div></div>
                             </div>
                             <hr style="border-color: var(--border-color); margin: 15px 0;">
-                        \` : ''}
+                        ` : ''}
                         <h3 style="margin-bottom: 10px; font-size: 1rem;">Group Memberships</h3>
                         <div class="info-box info">[D] = Dynamic membership | [A] = Assigned membership</div>
                         <div class="group-list">
-                            \${groups.map(g => {
+                            ${groups.map(g => {
                                 const typeClass = g.GroupType === 'Dynamic' ? 'dynamic' : 'assigned';
                                 const typeLabel = g.GroupType === 'Dynamic' ? '[D]' : '[A]';
-                                return \`<span class="group-chip \${typeClass}" title="\${escapeHtml(g.Description || 'No description')}">\${typeLabel} \${escapeHtml(g.DisplayName || 'Unknown Group')}</span>\`;
+                                return `<span class="group-chip ${typeClass}" title="${escapeHtml(g.Description || 'No description')}">${typeLabel} ${escapeHtml(g.DisplayName || 'Unknown Group')}</span>`;
                             }).join('')}
                         </div>
                     </div>
