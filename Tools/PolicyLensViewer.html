@@ -1569,12 +1569,22 @@
             // Build info message
             let infoMessage = '';
             if (!hasGroupData) {
-                infoMessage = `
-                    <div class="info-box warning">
-                        Cannot filter apps - device group membership data not available.
-                        Showing all ${allApps.length} assigned apps from tenant.
-                    </div>
-                `;
+                // No group data - we can only show "All Devices" / "All Users" apps
+                if (applicableApps.length > 0) {
+                    infoMessage = `
+                        <div class="info-box warning">
+                            Group membership data not available - showing only apps assigned to "All Devices" or "All Users".
+                            (${applicableApps.length} of ${allApps.length} assigned apps)
+                        </div>
+                    `;
+                } else {
+                    infoMessage = `
+                        <div class="info-box warning">
+                            Group membership data not available. No apps assigned to "All Devices" or "All Users" found.
+                            Run with <code>-IncludeGraph</code> to see group-targeted apps.
+                        </div>
+                    `;
+                }
             } else {
                 infoMessage = `
                     <div class="info-box explanation">
@@ -1584,12 +1594,10 @@
                 `;
             }
 
-            const appsToShow = hasGroupData ? applicableApps : allApps;
-
             return `
                 <div class="section">
                     <div class="section-header collapsed">
-                        <h2>Intune App Assignments (${hasGroupData ? applicableApps.length + ' of ' + allApps.length : allApps.length + ' assigned'})</h2>
+                        <h2>Intune App Assignments (${applicableApps.length} of ${allApps.length})</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
@@ -1832,12 +1840,22 @@
             // Build info message based on filtering status
             let infoMessage = '';
             if (!hasGroupData) {
-                infoMessage = `
-                    <div class="info-box warning">
-                        Cannot filter policies - device group membership data not available.
-                        Showing all ${totalCount} policies from tenant.
-                    </div>
-                `;
+                // No group data - we can only show "All Devices" / "All Users" policies
+                if (applicableCount > 0) {
+                    infoMessage = `
+                        <div class="info-box warning">
+                            Group membership data not available - showing only policies assigned to "All Devices" or "All Users".
+                            (${applicableCount} of ${totalCount} policies)
+                        </div>
+                    `;
+                } else {
+                    infoMessage = `
+                        <div class="info-box warning">
+                            Group membership data not available. No policies assigned to "All Devices" or "All Users" found.
+                            Run with <code>-IncludeGraph</code> to see group-targeted policies.
+                        </div>
+                    `;
+                }
             } else if (applicableCount === 0) {
                 infoMessage = `
                     <div class="info-box info">
