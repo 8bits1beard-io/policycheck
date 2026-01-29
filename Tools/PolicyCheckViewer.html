@@ -107,6 +107,126 @@
         .summary-card.magenta .number { color: var(--accent-magenta); }
         .summary-card.blue .number { color: var(--accent-blue); }
 
+        .summary-card .description {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Welcome Panel */
+        .welcome-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px 25px;
+            margin-bottom: 20px;
+        }
+
+        .welcome-panel h2 {
+            color: var(--accent-blue);
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .welcome-panel p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+        }
+
+        .welcome-panel ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .welcome-panel li {
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+            color: var(--text-primary);
+        }
+
+        .welcome-panel li::before {
+            content: "\2022";
+            color: var(--accent-blue);
+            position: absolute;
+            left: 0;
+        }
+
+        /* Callouts */
+        .callout {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .callout.warning {
+            background: rgba(224, 108, 117, 0.1);
+            border: 1px solid var(--accent-red);
+        }
+
+        .callout.info {
+            background: rgba(86, 182, 194, 0.1);
+            border: 1px solid var(--accent-cyan);
+        }
+
+        .callout-icon {
+            font-size: 1.3rem;
+        }
+
+        .callout-text {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        /* Legend Box */
+        .legend-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .legend-box .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+
+        .legend-color.match { background: var(--accent-green); }
+        .legend-color.conflict { background: var(--accent-red); }
+        .legend-color.migration { background: var(--accent-cyan); }
+        .legend-color.nomapping { background: var(--accent-magenta); }
+
+        .legend-label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .legend-desc {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Info box explanation variant */
+        .info-box.explanation {
+            background: rgba(91, 155, 213, 0.08);
+            border-left: 3px solid var(--accent-blue);
+            color: var(--text-secondary);
+        }
+
         /* Collapsible Sections */
         .section {
             background: var(--bg-secondary);
@@ -567,6 +687,117 @@
             tr.status-gpo-mapping td { background: #e0f5f5; }
             tr.status-gpo-nomapping td { background: #f0e0f5; }
         }
+
+        /* Welcome Panel */
+        .welcome-panel {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+        }
+        .welcome-panel h2 {
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        .welcome-panel p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+        .welcome-panel ul {
+            list-style: none;
+            padding: 0;
+        }
+        .welcome-panel li {
+            color: var(--text-primary);
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .welcome-panel li::before {
+            content: "•";
+            color: var(--accent-blue);
+            position: absolute;
+            left: 0;
+        }
+
+        /* Summary Card Descriptions */
+        .summary-card .description {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+            line-height: 1.3;
+        }
+
+        /* Info Boxes - Enhanced */
+        .info-box.explanation {
+            background: rgba(91, 155, 213, 0.1);
+            border-left: 3px solid var(--accent-blue);
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Legend Box */
+        .legend-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .legend-color.match { background: var(--accent-green); }
+        .legend-color.conflict { background: var(--accent-red); }
+        .legend-color.migration { background: var(--accent-cyan); }
+        .legend-color.nomapping { background: var(--accent-magenta); }
+        .legend-label { color: var(--text-primary); font-weight: 500; }
+        .legend-desc { color: var(--text-secondary); font-size: 0.8rem; }
+
+        /* Callout Banners */
+        .callout {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .callout-icon {
+            font-size: 1.3rem;
+        }
+        .callout.warning {
+            background: rgba(224, 108, 117, 0.15);
+            border: 1px solid var(--accent-red);
+        }
+        .callout.warning .callout-icon { color: var(--accent-red); }
+        .callout.info {
+            background: rgba(86, 182, 194, 0.15);
+            border: 1px solid var(--accent-cyan);
+        }
+        .callout.info .callout-icon { color: var(--accent-cyan); }
+        .callout-text {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
     </style>
 </head>
 <body>
@@ -581,6 +812,16 @@
 
     <!-- Upload View -->
     <div id="view-upload" class="view active">
+        <div class="welcome-panel">
+            <h2>Welcome to PolicyCheck Viewer</h2>
+            <p>This tool helps Windows Engineers plan GPO-to-Intune migration by analyzing policy overlap on Windows devices.</p>
+            <ul>
+                <li>See all GPO registry policies and MDM settings on a device</li>
+                <li>Identify conflicts where GPO and Intune configure the same setting differently</li>
+                <li>Find GPO settings ready to migrate (have known Intune equivalents)</li>
+                <li>View Intune app assignments and Azure AD group memberships</li>
+            </ul>
+        </div>
         <input type="file" id="file-input" accept=".json" multiple style="position: absolute; left: -9999px;">
         <div class="drop-zone" id="drop-zone">
             <h2>Drop PolicyCheck JSON Files Here</h2>
@@ -806,57 +1047,89 @@
                     <div class="subtitle">Exported: ${device.exportedAt ? formatDate(device.exportedAt) : 'Unknown'} | OS: ${escapeHtml(device.device?.osVersion || 'Unknown')}</div>
                 </div>
                 ${renderSummaryCards(device)}
-                ${renderGPOSection(device)}
-                ${renderMDMSection(device)}
+                ${renderCallouts(device)}
                 ${renderOverlapSection(device)}
+                ${renderProfilesSection(device)}
                 ${renderAppsSection(device)}
                 ${renderGroupsSection(device)}
+                ${renderGPOSection(device)}
+                ${renderMDMSection(device)}
             `;
 
             initCollapsibles();
         }
 
         function renderSummaryCards(device) {
-            const summary = device.analysis?.Summary || {};
-            const gpoCount = summary.TotalGPOSettings || device.gpoData?.RegistryPolicies?.length || 0;
-            const mdmCount = summary.TotalMDMSettings || ((device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0));
-            const conflicts = summary.ValuesInConflict || 0;
-            const matches = summary.BothConfiguredMatch || 0;
-            const migrationReady = summary.GPOOnlyWithMapping || 0;
-            const noMapping = summary.GPOOnlyNoMapping || 0;
+            const gpoCount = device.gpoData?.RegistryPolicies?.length || 0;
+            const mdmCount = (device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0);
+            const analysis = device.analysis?.Summary || {};
+            const matches = analysis.BothConfiguredMatch || 0;
+            const conflicts = analysis.ValuesInConflict || 0;
+            const migrationReady = analysis.GPOOnlyWithMapping || 0;
+            const noMapping = analysis.GPOOnlyNoMapping || 0;
 
             return `
                 <div class="summary-grid">
                     <div class="summary-card blue">
-                        <span class="number">${summary.TotalGPOs || device.gpoData?.TotalGPOCount || 0}</span>
-                        <span class="label">Applied GPOs</span>
-                    </div>
-                    <div class="summary-card blue">
                         <span class="number">${gpoCount}</span>
                         <span class="label">GPO Settings</span>
+                        <span class="description">Registry policies from Group Policy</span>
                     </div>
-                    <div class="summary-card cyan">
+                    <div class="summary-card blue">
                         <span class="number">${mdmCount}</span>
-                        <span class="label">MDM Policies</span>
+                        <span class="label">MDM Settings</span>
+                        <span class="description">Policies from Intune/MDM</span>
                     </div>
                     <div class="summary-card green">
                         <span class="number">${matches}</span>
-                        <span class="label">Matching</span>
+                        <span class="label">Matches</span>
+                        <span class="description">Same setting, same value</span>
                     </div>
                     <div class="summary-card red">
                         <span class="number">${conflicts}</span>
                         <span class="label">Conflicts</span>
+                        <span class="description">Same setting, different values</span>
                     </div>
-                    <div class="summary-card yellow">
+                    <div class="summary-card cyan">
                         <span class="number">${migrationReady}</span>
                         <span class="label">Migration Ready</span>
+                        <span class="description">GPO-only with Intune mapping</span>
                     </div>
                     <div class="summary-card magenta">
                         <span class="number">${noMapping}</span>
                         <span class="label">No Mapping</span>
+                        <span class="description">GPO-only, no Intune equivalent</span>
                     </div>
                 </div>
             `;
+        }
+
+        function renderCallouts(device) {
+            const analysis = device.analysis?.Summary || {};
+            const conflicts = analysis.ValuesInConflict || 0;
+            const migrationReady = analysis.GPOOnlyWithMapping || 0;
+
+            let html = '';
+
+            if (conflicts > 0) {
+                html += `
+                    <div class="callout warning">
+                        <span class="callout-icon">⚠️</span>
+                        <span class="callout-text"><strong>${conflicts} conflict${conflicts > 1 ? 's' : ''} detected</strong> - These settings have different values in GPO vs Intune and need review.</span>
+                    </div>
+                `;
+            }
+
+            if (migrationReady > 0) {
+                html += `
+                    <div class="callout info">
+                        <span class="callout-icon">📋</span>
+                        <span class="callout-text"><strong>${migrationReady} setting${migrationReady > 1 ? 's' : ''} ready for migration</strong> - These GPO settings have known Intune equivalents.</span>
+                    </div>
+                `;
+            }
+
+            return html;
         }
 
         function renderGPOSection(device) {
@@ -882,6 +1155,9 @@
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
+                        <div class="info-box explanation">
+                            Registry-based policies detected from Group Policy. Review these when planning migration to Intune.
+                        </div>
                         <div class="filter-bar">
                             <input type="text" id="gpo-search" placeholder="Search GPO settings..." oninput="filterTable('gpo-table', 'gpo-search')">
                         </div>
@@ -977,6 +1253,9 @@
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
+                        <div class="info-box explanation">
+                            Policies currently applied to this device via Intune/MDM enrollment.
+                        </div>
                         ${enrollmentHtml}
                         ${policiesHtml}
                     </div>
@@ -1007,11 +1286,26 @@
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
-                        <div class="legend">
-                            <div class="legend-item"><span class="legend-dot green"></span> Both Match</div>
-                            <div class="legend-item"><span class="legend-dot red"></span> Conflict</div>
-                            <div class="legend-item"><span class="legend-dot cyan"></span> Migration Ready</div>
-                            <div class="legend-item"><span class="legend-dot magenta"></span> No MDM Mapping</div>
+                        <div class="info-box explanation">
+                            Compare GPO settings against Intune policies. <strong>Conflicts</strong> need resolution. <strong>Migration Ready</strong> settings can be moved to Intune.
+                        </div>
+                        <div class="legend-box">
+                            <div class="legend-item">
+                                <span class="legend-color match"></span>
+                                <span><span class="legend-label">Match</span> <span class="legend-desc">- Same value in both</span></span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color conflict"></span>
+                                <span><span class="legend-label">Conflict</span> <span class="legend-desc">- Different values, needs review</span></span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color migration"></span>
+                                <span><span class="legend-label">Migration Ready</span> <span class="legend-desc">- Can migrate to Intune</span></span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color nomapping"></span>
+                                <span><span class="legend-label">No Mapping</span> <span class="legend-desc">- No Intune equivalent</span></span>
+                            </div>
                         </div>
                         <div class="filter-bar">
                             <input type="text" id="overlap-search" placeholder="Search..." oninput="filterOverlapTable()">
@@ -1152,6 +1446,11 @@
                     </div>
                 </div>
             `;
+        }
+
+        function renderProfilesSection(device) {
+            // Placeholder for future profiles section
+            return '';
         }
 
         // Comparison rendering
