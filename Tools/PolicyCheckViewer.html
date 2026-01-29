@@ -1603,6 +1603,9 @@
                 return '';
             }
 
+            const groupData = device.groupData;
+            const deviceGroupIds = getDeviceGroupIds(groupData);
+
             const profiles = graphData.Profiles || [];
             const compliance = graphData.CompliancePolicies || [];
             const settingsCatalog = graphData.SettingsCatalog || [];
@@ -1612,32 +1615,38 @@
                 return '';
             }
 
+            // Filter to only policies that apply to this device
+            const applicableProfiles = profiles.filter(p => policyAppliesToDevice(p, deviceGroupIds));
+            const applicableCompliance = compliance.filter(p => policyAppliesToDevice(p, deviceGroupIds));
+            const applicableCatalog = settingsCatalog.filter(p => policyAppliesToDevice(p, deviceGroupIds));
+            const applicableCount = applicableProfiles.length + applicableCompliance.length + applicableCatalog.length;
+
+            // Check if we have group data to filter
+            const hasGroupData = groupData?.Available && groupData?.DeviceFound && deviceGroupIds.length > 0;
+
             let profilesHtml = '';
-            if (profiles.length > 0) {
+            if (applicableProfiles.length > 0) {
                 profilesHtml = `
-                    <h3 style="margin: 15px 0 10px; color: var(--text-secondary);">Device Configuration Profiles (${profiles.length})</h3>
+                    <h3 style="margin: 15px 0 10px; color: var(--text-secondary);">Device Configuration Profiles (${applicableProfiles.length})</h3>
                     <div class="table-wrapper">
                         <table>
                             <thead>
                                 <tr>
                                     <th>Name</th>
                                     <th>Type</th>
-                                    <th>Assignments</th>
+                                    <th>Assigned Via</th>
                                     <th>Last Modified</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${profiles.map(p => {
+                                ${applicableProfiles.map(p => {
                                     const profileType = (p.OdataType || '').replace('#microsoft.graph.', '').replace(/([A-Z])/g, ' $1').trim();
-                                    const assignmentCount = (p.Assignments || []).length;
-                                    const assignmentText = assignmentCount > 0 ?
-                                        (p.Assignments || []).map(a => formatAssignmentTarget(a.TargetType)).join(', ') :
-                                        'None';
+                                    const assignmentReason = getAssignmentReason(p, deviceGroupIds, groupData);
                                     return `
                                         <tr>
                                             <td><strong>${escapeHtml(p.DisplayName || '')}</strong></td>
                                             <td style="font-size: 0.85rem;">${escapeHtml(profileType)}</td>
-                                            <td>${escapeHtml(assignmentText)}</td>
+                                            <td>${assignmentReason}</td>
                                             <td>${p.LastModified ? new Date(p.LastModified).toLocaleDateString() : '-'}</td>
                                         </tr>
                                     `;
@@ -1649,30 +1658,27 @@
             }
 
             let complianceHtml = '';
-            if (compliance.length > 0) {
+            if (applicableCompliance.length > 0) {
                 complianceHtml = `
-                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Compliance Policies (${compliance.length})</h3>
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Compliance Policies (${applicableCompliance.length})</h3>
                     <div class="table-wrapper">
                         <table>
                             <thead>
                                 <tr>
                                     <th>Name</th>
                                     <th>Type</th>
-                                    <th>Assignments</th>
+                                    <th>Assigned Via</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${compliance.map(p => {
+                                ${applicableCompliance.map(p => {
                                     const policyType = (p.OdataType || '').replace('#microsoft.graph.', '').replace(/([A-Z])/g, ' $1').trim();
-                                    const assignmentCount = (p.Assignments || []).length;
-                                    const assignmentText = assignmentCount > 0 ?
-                                        (p.Assignments || []).map(a => formatAssignmentTarget(a.TargetType)).join(', ') :
-                                        'None';
+                                    const assignmentReason = getAssignmentReason(p, deviceGroupIds, groupData);
                                     return `
                                         <tr>
                                             <td><strong>${escapeHtml(p.DisplayName || '')}</strong></td>
                                             <td style="font-size: 0.85rem;">${escapeHtml(policyType)}</td>
-                                            <td>${escapeHtml(assignmentText)}</td>
+                                            <td>${assignmentReason}</td>
                                         </tr>
                                     `;
                                 }).join('')}
@@ -1683,9 +1689,9 @@
             }
 
             let catalogHtml = '';
-            if (settingsCatalog.length > 0) {
+            if (applicableCatalog.length > 0) {
                 catalogHtml = `
-                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Settings Catalog Policies (${settingsCatalog.length})</h3>
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Settings Catalog Policies (${applicableCatalog.length})</h3>
                     <div class="table-wrapper">
                         <table>
                             <thead>
@@ -1693,21 +1699,18 @@
                                     <th>Name</th>
                                     <th>Platform</th>
                                     <th>Technologies</th>
-                                    <th>Assignments</th>
+                                    <th>Assigned Via</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${settingsCatalog.map(p => {
-                                    const assignmentCount = (p.Assignments || []).length;
-                                    const assignmentText = assignmentCount > 0 ?
-                                        (p.Assignments || []).map(a => formatAssignmentTarget(a.TargetType)).join(', ') :
-                                        'None';
+                                ${applicableCatalog.map(p => {
+                                    const assignmentReason = getAssignmentReason(p, deviceGroupIds, groupData);
                                     return `
                                         <tr>
                                             <td><strong>${escapeHtml(p.Name || '')}</strong></td>
                                             <td>${escapeHtml(p.Platforms || '-')}</td>
                                             <td>${escapeHtml(p.Technologies || '-')}</td>
-                                            <td>${escapeHtml(assignmentText)}</td>
+                                            <td>${assignmentReason}</td>
                                         </tr>
                                     `;
                                 }).join('')}
@@ -1717,23 +1720,106 @@
                 `;
             }
 
+            // Build info message based on filtering status
+            let infoMessage = '';
+            if (!hasGroupData) {
+                infoMessage = `
+                    <div class="info-box warning">
+                        Cannot filter policies - device group membership data not available.
+                        Showing all ${totalCount} policies from tenant.
+                    </div>
+                `;
+            } else if (applicableCount === 0) {
+                infoMessage = `
+                    <div class="info-box info">
+                        No Intune policies are directly assigned to this device or its ${deviceGroupIds.length} groups.
+                        (${totalCount} policies exist in tenant)
+                    </div>
+                `;
+            } else {
+                infoMessage = `
+                    <div class="info-box explanation">
+                        Showing <strong>${applicableCount} of ${totalCount}</strong> Intune policies that apply to this device
+                        (assigned via "All Devices" or device's ${deviceGroupIds.length} group memberships).
+                    </div>
+                `;
+            }
+
             return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>Intune Configuration Profiles (${totalCount} policies)</h2>
+                        <h2>Intune Policies Assigned to Device (${applicableCount} of ${totalCount})</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
-                        <div class="info-box explanation">
-                            Configuration profiles, compliance policies, and Settings Catalog policies defined in Microsoft Intune.
-                            These are the policies that could be applying MDM settings to this device.
-                        </div>
+                        ${infoMessage}
                         ${profilesHtml}
                         ${complianceHtml}
                         ${catalogHtml}
                     </div>
                 </div>
             `;
+        }
+
+        // Get all group IDs the device is a member of
+        function getDeviceGroupIds(groupData) {
+            if (!groupData?.Available || !groupData?.DeviceFound || !groupData?.Groups) {
+                return [];
+            }
+            return groupData.Groups.map(g => g.Id).filter(id => id);
+        }
+
+        // Check if a policy applies to the device based on assignments
+        function policyAppliesToDevice(policy, deviceGroupIds) {
+            const assignments = policy.Assignments || [];
+            if (assignments.length === 0) return false;
+
+            let isIncluded = false;
+            let isExcluded = false;
+
+            for (const assignment of assignments) {
+                const targetType = (assignment.TargetType || '').replace('#microsoft.graph.', '');
+                const groupId = assignment.GroupId;
+
+                // Check for "All Devices" or "All Users" assignments
+                if (targetType === 'allDevicesAssignmentTarget' || targetType === 'allLicensedUsersAssignmentTarget') {
+                    isIncluded = true;
+                }
+                // Check for group-based assignment
+                else if (targetType === 'groupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
+                    isIncluded = true;
+                }
+                // Check for exclusion
+                else if (targetType === 'exclusionGroupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
+                    isExcluded = true;
+                }
+            }
+
+            return isIncluded && !isExcluded;
+        }
+
+        // Get human-readable reason why policy applies
+        function getAssignmentReason(policy, deviceGroupIds, groupData) {
+            const assignments = policy.Assignments || [];
+            const reasons = [];
+
+            for (const assignment of assignments) {
+                const targetType = (assignment.TargetType || '').replace('#microsoft.graph.', '');
+                const groupId = assignment.GroupId;
+
+                if (targetType === 'allDevicesAssignmentTarget') {
+                    reasons.push('<span class="status-tag both-match">All Devices</span>');
+                } else if (targetType === 'allLicensedUsersAssignmentTarget') {
+                    reasons.push('<span class="status-tag migration-ready">All Users</span>');
+                } else if (targetType === 'groupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
+                    // Find group name
+                    const group = groupData?.Groups?.find(g => g.Id === groupId);
+                    const groupName = group?.DisplayName || 'Group';
+                    reasons.push(`<span class="status-tag mdm-only" title="${escapeHtml(groupId)}">${escapeHtml(groupName)}</span>`);
+                }
+            }
+
+            return reasons.length > 0 ? reasons.join(' ') : '-';
         }
 
         function formatAssignmentTarget(targetType) {
