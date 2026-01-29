@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolicyCheck Viewer</title>
+    <style>
+        :root {
+            --bg-primary: #1e1e2e;
+            --bg-secondary: #2a2a3e;
+            --bg-card: #313145;
+            --text-primary: #e0e0e8;
+            --text-secondary: #a0a0b8;
+            --accent-blue: #5b9bd5;
+            --accent-green: #6bc96b;
+            --accent-yellow: #e5c07b;
+            --accent-red: #e06c75;
+            --accent-cyan: #56b6c2;
+            --accent-magenta: #c678dd;
+            --border-color: #404060;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--accent-blue);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .report-header {
+            border-bottom: 2px solid var(--accent-blue);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .report-header .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge-enrolled {
+            background-color: var(--accent-green);
+            color: #1e1e2e;
+        }
+
+        .badge-not-enrolled {
+            background-color: var(--accent-yellow);
+            color: #1e1e2e;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-card .number {
+            font-size: 2rem;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .summary-card.green .number { color: var(--accent-green); }
+        .summary-card.yellow .number { color: var(--accent-yellow); }
+        .summary-card.red .number { color: var(--accent-red); }
+        .summary-card.cyan .number { color: var(--accent-cyan); }
+        .summary-card.magenta .number { color: var(--accent-magenta); }
+        .summary-card.blue .number { color: var(--accent-blue); }
+
+        /* Collapsible Sections */
+        .section {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: var(--bg-card);
+            padding: 14px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .section-header:hover {
+            background: #3a3a50;
+        }
+
+        .section-header h2 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .section-header .toggle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            transition: transform 0.3s;
+        }
+
+        .section-header.collapsed .toggle {
+            transform: rotate(-90deg);
+        }
+
+        .section-body {
+            padding: 15px 20px;
+        }
+
+        .section-body.hidden {
+            display: none;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            background: var(--bg-card);
+            color: var(--accent-blue);
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: rgba(91, 155, 213, 0.05);
+        }
+
+        /* Status rows */
+        tr.status-both-match td {
+            border-left: 3px solid var(--accent-green);
+        }
+
+        tr.status-both-conflict td {
+            border-left: 3px solid var(--accent-red);
+            background: rgba(224, 108, 117, 0.08);
+        }
+
+        tr.status-gpo-mapping td {
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        tr.status-gpo-nomapping td {
+            border-left: 3px solid var(--accent-magenta);
+        }
+
+        tr.status-mdm-only td {
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        /* Status badges in tables */
+        .status-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-tag.both-match {
+            background: rgba(107, 201, 107, 0.2);
+            color: var(--accent-green);
+        }
+
+        .status-tag.conflict {
+            background: rgba(224, 108, 117, 0.2);
+            color: var(--accent-red);
+        }
+
+        .status-tag.migration-ready {
+            background: rgba(86, 182, 194, 0.2);
+            color: var(--accent-cyan);
+        }
+
+        .status-tag.no-mapping {
+            background: rgba(198, 120, 221, 0.2);
+            color: var(--accent-magenta);
+        }
+
+        .status-tag.mdm-only {
+            background: rgba(91, 155, 213, 0.2);
+            color: var(--accent-blue);
+        }
+
+        /* Info boxes */
+        .info-box {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+
+        .info-box.info {
+            background: rgba(91, 155, 213, 0.1);
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .info-box.warning {
+            background: rgba(229, 192, 123, 0.1);
+            border-left: 3px solid var(--accent-yellow);
+        }
+
+        .info-box.success {
+            background: rgba(107, 201, 107, 0.1);
+            border-left: 3px solid var(--accent-green);
+        }
+
+        /* Filter/Search */
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar input {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-bar input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .filter-bar select {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        /* Enrollment details */
+        .enrollment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+        }
+
+        .enrollment-item {
+            padding: 8px 0;
+        }
+
+        .enrollment-item .key {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .enrollment-item .value {
+            font-size: 1rem;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: var(--bg-card);
+            border-radius: 6px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .legend-dot.green { background: var(--accent-green); }
+        .legend-dot.red { background: var(--accent-red); }
+        .legend-dot.cyan { background: var(--accent-cyan); }
+        .legend-dot.magenta { background: var(--accent-magenta); }
+        .legend-dot.blue { background: var(--accent-blue); }
+
+        /* App assignments section */
+        .app-card {
+            background: var(--bg-card);
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .app-card .app-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .app-card .app-type {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .app-card .app-intent {
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .app-card .app-intent.required {
+            background: rgba(91, 155, 213, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .app-card .app-intent.available {
+            background: rgba(107, 201, 107, 0.2);
+            color: var(--accent-green);
+        }
+
+        /* Group memberships */
+        .group-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .group-chip {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 4px 14px;
+            font-size: 0.85rem;
+        }
+
+        .group-chip.dynamic {
+            border-color: var(--accent-cyan);
+        }
+
+        .group-chip.assigned {
+            border-color: var(--accent-blue);
+        }
+
+        /* Footer */
+        .report-footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Drop zone */
+        .drop-zone {
+            border: 3px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 60px 40px;
+            text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s;
+            background: var(--bg-secondary);
+        }
+        .drop-zone.drag-over {
+            border-color: var(--accent-blue);
+            background: rgba(91, 155, 213, 0.1);
+        }
+        .drop-zone h2 { color: var(--text-primary); margin-bottom: 10px; }
+        .drop-zone p { color: var(--text-secondary); }
+
+        /* Device cards in upload view */
+        .device-cards { display: flex; gap: 15px; flex-wrap: wrap; margin: 20px 0; }
+        .device-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px 20px;
+            min-width: 200px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .device-card:hover { border-color: var(--accent-blue); }
+        .device-card.selected { border-color: var(--accent-green); background: rgba(107, 201, 107, 0.1); }
+        .device-card .name { font-weight: 600; color: var(--text-primary); }
+        .device-card .info { font-size: 0.85rem; color: var(--text-secondary); }
+        .device-card .remove {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: var(--accent-red);
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+        .device-card .remove:hover { opacity: 0.7; }
+
+        /* Comparison grid */
+        .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .compare-column { min-width: 0; }
+        .compare-header {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* Diff highlighting */
+        .diff-unique-a { background: rgba(224, 108, 117, 0.15); }
+        .diff-unique-b { background: rgba(107, 201, 107, 0.15); }
+        .diff-value-mismatch { background: rgba(229, 192, 123, 0.15); }
+        .diff-identical { }
+
+        /* Action buttons */
+        .btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 5px;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 5px; margin-bottom: 20px; }
+        .tab {
+            padding: 10px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        .tab.active { background: var(--bg-card); color: var(--text-primary); border-bottom-color: var(--bg-card); }
+
+        /* View containers */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* Navigation */
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-bar h1 { margin-bottom: 0; }
+
+        .nav-actions { display: flex; gap: 10px; }
+
+        /* File input styling */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Table wrapper for scroll */
+        .table-wrapper {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+                color: #333;
+                padding: 10px;
+            }
+
+            .section-header { cursor: default; }
+            .section-body { display: block !important; }
+
+            .summary-card {
+                border: 1px solid #ccc;
+                background: #f9f9f9;
+            }
+
+            tr.status-both-conflict td { background: #ffe0e0; }
+            tr.status-gpo-mapping td { background: #e0f5f5; }
+            tr.status-gpo-nomapping td { background: #f0e0f5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <h1>PolicyCheck Viewer</h1>
+        <div class="nav-actions">
+            <button class="btn btn-secondary" onclick="showView('upload')" id="nav-upload">Upload Files</button>
+            <button class="btn btn-secondary" onclick="showView('single')" id="nav-single" disabled>Single View</button>
+            <button class="btn btn-secondary" onclick="showView('compare')" id="nav-compare" disabled>Compare</button>
+        </div>
+    </div>
+
+    <!-- Upload View -->
+    <div id="view-upload" class="view active">
+        <div class="drop-zone" id="drop-zone">
+            <h2>Drop PolicyCheck JSON Files Here</h2>
+            <p>or click to select files</p>
+            <input type="file" id="file-input" accept=".json" multiple style="display: none;">
+        </div>
+
+        <div id="loaded-devices">
+            <h3 style="margin-bottom: 10px; color: var(--text-secondary);">Loaded Devices</h3>
+            <div class="device-cards" id="device-cards">
+                <p style="color: var(--text-secondary);">No devices loaded. Drop JSON files above.</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button class="btn" onclick="viewSelectedDevice()" id="btn-view-single" disabled>View Selected Device</button>
+            <button class="btn" onclick="compareSelectedDevices()" id="btn-compare" disabled>Compare Selected Devices (2)</button>
+        </div>
+    </div>
+
+    <!-- Single Device View -->
+    <div id="view-single" class="view">
+        <div id="single-content"></div>
+    </div>
+
+    <!-- Compare View -->
+    <div id="view-compare" class="view">
+        <div id="compare-content"></div>
+    </div>
+
+    <div class="report-footer">
+        PolicyCheck Viewer - View and compare policy exports
+    </div>
+
+    <script>
+        // Application State
+        const AppState = {
+            devices: [],
+            currentView: 'upload',
+            selectedDevices: []
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initDropZone();
+        });
+
+        // File handling
+        function initDropZone() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                handleFileDrop(e);
+            });
+
+            fileInput.addEventListener('change', handleFileSelect);
+        }
+
+        function handleFileDrop(e) {
+            const files = e.dataTransfer.files;
+            processFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            processFiles(files);
+            e.target.value = '';
+        }
+
+        function processFiles(files) {
+            for (const file of files) {
+                if (file.type === 'application/json' || file.name.endsWith('.json')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if (validateSchema(data)) {
+                                // Check for duplicates
+                                const exists = AppState.devices.some(d =>
+                                    d.device?.computerName === data.device?.computerName &&
+                                    d.exportedAt === data.exportedAt
+                                );
+                                if (!exists) {
+                                    AppState.devices.push(data);
+                                    renderDeviceCards();
+                                } else {
+                                    alert(`Device "${data.device?.computerName || 'Unknown'}" is already loaded.`);
+                                }
+                            } else {
+                                alert(`Invalid schema in file: ${file.name}. Expected schemaVersion "1.0".`);
+                            }
+                        } catch (err) {
+                            alert(`Error parsing ${file.name}: ${err.message}`);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            }
+        }
+
+        function validateSchema(data) {
+            return data && data.schemaVersion === "1.0";
+        }
+
+        function removeDevice(index, e) {
+            e.stopPropagation();
+            AppState.devices.splice(index, 1);
+            AppState.selectedDevices = AppState.selectedDevices.filter(i => i !== index).map(i => i > index ? i - 1 : i);
+            renderDeviceCards();
+            updateNavButtons();
+        }
+
+        function renderDeviceCards() {
+            const container = document.getElementById('device-cards');
+
+            if (AppState.devices.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary);">No devices loaded. Drop JSON files above.</p>';
+                return;
+            }
+
+            container.innerHTML = AppState.devices.map((device, index) => {
+                const name = device.device?.computerName || 'Unknown Device';
+                const date = device.exportedAt ? formatDate(device.exportedAt) : 'Unknown date';
+                const gpoCount = device.gpoData?.RegistryPolicies?.length || 0;
+                const mdmCount = (device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0);
+                const isSelected = AppState.selectedDevices.includes(index);
+
+                return `
+                    <div class="device-card ${isSelected ? 'selected' : ''}" onclick="selectDevice(${index})">
+                        <span class="remove" onclick="removeDevice(${index}, event)">&times;</span>
+                        <div class="name">${escapeHtml(name)}</div>
+                        <div class="info">${escapeHtml(date)}</div>
+                        <div class="info">${gpoCount} GPO settings, ${mdmCount} MDM policies</div>
+                    </div>
+                `;
+            }).join('');
+
+            updateNavButtons();
+        }
+
+        function selectDevice(index) {
+            const idx = AppState.selectedDevices.indexOf(index);
+            if (idx > -1) {
+                AppState.selectedDevices.splice(idx, 1);
+            } else {
+                if (AppState.selectedDevices.length >= 2) {
+                    AppState.selectedDevices.shift();
+                }
+                AppState.selectedDevices.push(index);
+            }
+            renderDeviceCards();
+        }
+
+        function updateNavButtons() {
+            const btnViewSingle = document.getElementById('btn-view-single');
+            const btnCompare = document.getElementById('btn-compare');
+            const navSingle = document.getElementById('nav-single');
+            const navCompare = document.getElementById('nav-compare');
+
+            btnViewSingle.disabled = AppState.selectedDevices.length !== 1;
+            btnCompare.disabled = AppState.selectedDevices.length !== 2;
+            navSingle.disabled = AppState.devices.length === 0;
+            navCompare.disabled = AppState.devices.length < 2;
+        }
+
+        // View switching
+        function showView(viewName) {
+            AppState.currentView = viewName;
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(`view-${viewName}`).classList.add('active');
+
+            document.querySelectorAll('.nav-actions .btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`nav-${viewName}`)?.classList.add('active');
+        }
+
+        function viewSelectedDevice() {
+            if (AppState.selectedDevices.length === 1) {
+                const device = AppState.devices[AppState.selectedDevices[0]];
+                renderSingleView(device);
+                showView('single');
+            }
+        }
+
+        function compareSelectedDevices() {
+            if (AppState.selectedDevices.length === 2) {
+                const device1 = AppState.devices[AppState.selectedDevices[0]];
+                const device2 = AppState.devices[AppState.selectedDevices[1]];
+                renderCompareView(device1, device2);
+                showView('compare');
+            }
+        }
+
+        // Single device rendering
+        function renderSingleView(device) {
+            const container = document.getElementById('single-content');
+            const name = device.device?.computerName || 'Unknown Device';
+            const enrolled = device.mdmData?.IsEnrolled;
+
+            container.innerHTML = `
+                <div class="report-header">
+                    <h1>${escapeHtml(name)}
+                        ${enrolled ? '<span class="badge badge-enrolled">MDM Enrolled</span>' : '<span class="badge badge-not-enrolled">Not Enrolled</span>'}
+                    </h1>
+                    <div class="subtitle">Exported: ${device.exportedAt ? formatDate(device.exportedAt) : 'Unknown'} | OS: ${escapeHtml(device.device?.osVersion || 'Unknown')}</div>
+                </div>
+                ${renderSummaryCards(device)}
+                ${renderGPOSection(device)}
+                ${renderMDMSection(device)}
+                ${renderOverlapSection(device)}
+                ${renderAppsSection(device)}
+                ${renderGroupsSection(device)}
+            `;
+
+            initCollapsibles();
+        }
+
+        function renderSummaryCards(device) {
+            const summary = device.analysis?.Summary || {};
+            const gpoCount = summary.TotalGPOSettings || device.gpoData?.RegistryPolicies?.length || 0;
+            const mdmCount = summary.TotalMDMSettings || ((device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0));
+            const conflicts = summary.ValuesInConflict || 0;
+            const matches = summary.BothConfiguredMatch || 0;
+            const migrationReady = summary.GPOOnlyWithMapping || 0;
+            const noMapping = summary.GPOOnlyNoMapping || 0;
+
+            return `
+                <div class="summary-grid">
+                    <div class="summary-card blue">
+                        <span class="number">${summary.TotalGPOs || device.gpoData?.TotalGPOCount || 0}</span>
+                        <span class="label">Applied GPOs</span>
+                    </div>
+                    <div class="summary-card blue">
+                        <span class="number">${gpoCount}</span>
+                        <span class="label">GPO Settings</span>
+                    </div>
+                    <div class="summary-card cyan">
+                        <span class="number">${mdmCount}</span>
+                        <span class="label">MDM Policies</span>
+                    </div>
+                    <div class="summary-card green">
+                        <span class="number">${matches}</span>
+                        <span class="label">Matching</span>
+                    </div>
+                    <div class="summary-card red">
+                        <span class="number">${conflicts}</span>
+                        <span class="label">Conflicts</span>
+                    </div>
+                    <div class="summary-card yellow">
+                        <span class="number">${migrationReady}</span>
+                        <span class="label">Migration Ready</span>
+                    </div>
+                    <div class="summary-card magenta">
+                        <span class="number">${noMapping}</span>
+                        <span class="label">No Mapping</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGPOSection(device) {
+            const settings = device.gpoData?.RegistryPolicies || [];
+            if (settings.length === 0) {
+                return `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>GPO Registry Settings (0)</h2>
+                            <span class="toggle">&#9660;</span>
+                        </div>
+                        <div class="section-body">
+                            <p style="color: var(--text-secondary);">No GPO registry settings found.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>GPO Registry Settings (${settings.length})</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="filter-bar">
+                            <input type="text" id="gpo-search" placeholder="Search GPO settings..." oninput="filterTable('gpo-table', 'gpo-search')">
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="gpo-table">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Path</th>
+                                        <th>Value Name</th>
+                                        <th>Value</th>
+                                        <th>Scope</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${settings.map(s => `
+                                        <tr>
+                                            <td>${escapeHtml(s.Category || '')}</td>
+                                            <td style="font-size: 0.8rem;">${escapeHtml(s.Path || '')}</td>
+                                            <td>${escapeHtml(s.ValueName || '')}</td>
+                                            <td>${escapeHtml(formatValue(s.Data))}</td>
+                                            <td>${escapeHtml(s.Scope || '')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMDMSection(device) {
+            const mdm = device.mdmData || {};
+            const enrollments = mdm.Enrollments || [];
+            const isEnrolled = mdm.IsEnrolled;
+            const devicePolicies = mdm.DevicePolicies || [];
+            const userPolicies = mdm.UserPolicies || [];
+            const allPolicies = [...devicePolicies, ...userPolicies];
+
+            let enrollmentHtml = '';
+            if (isEnrolled && enrollments.length > 0) {
+                const enr = enrollments[0];
+                enrollmentHtml = `
+                    <div class="info-box success">MDM Enrolled</div>
+                    <div class="enrollment-grid">
+                        ${enr.ProviderId ? `<div class="enrollment-item"><div class="key">Provider</div><div class="value">${escapeHtml(enr.ProviderId)}</div></div>` : ''}
+                        ${enr.UPN ? `<div class="enrollment-item"><div class="key">UPN</div><div class="value">${escapeHtml(enr.UPN)}</div></div>` : ''}
+                        ${enr.AADTenantId ? `<div class="enrollment-item"><div class="key">Tenant ID</div><div class="value">${escapeHtml(enr.AADTenantId)}</div></div>` : ''}
+                        ${enr.EnrollmentId ? `<div class="enrollment-item"><div class="key">Enrollment ID</div><div class="value">${escapeHtml(enr.EnrollmentId)}</div></div>` : ''}
+                    </div>
+                `;
+            } else {
+                enrollmentHtml = '<div class="info-box warning">Device is not MDM enrolled</div>';
+            }
+
+            let policiesHtml = '';
+            if (allPolicies.length > 0) {
+                policiesHtml = `
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">MDM Policies (${allPolicies.length})</h3>
+                    <div class="filter-bar">
+                        <input type="text" id="mdm-search" placeholder="Search MDM policies..." oninput="filterTable('mdm-table', 'mdm-search')">
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="mdm-table">
+                            <thead>
+                                <tr>
+                                    <th>Area</th>
+                                    <th>Setting</th>
+                                    <th>Value</th>
+                                    <th>Scope</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${allPolicies.map(p => `
+                                    <tr>
+                                        <td>${escapeHtml(p.Area || '')}</td>
+                                        <td>${escapeHtml(p.Setting || '')}</td>
+                                        <td>${escapeHtml(formatValue(p.Value))}</td>
+                                        <td>${escapeHtml(p.Scope || '')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>MDM Settings</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        ${enrollmentHtml}
+                        ${policiesHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOverlapSection(device) {
+            const overlap = device.analysis?.DetailedResults || [];
+            if (overlap.length === 0) {
+                return `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>Overlap Analysis (0)</h2>
+                            <span class="toggle">&#9660;</span>
+                        </div>
+                        <div class="section-body">
+                            <p style="color: var(--text-secondary);">No overlap analysis data available.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Overlap Analysis (${overlap.length})</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="legend">
+                            <div class="legend-item"><span class="legend-dot green"></span> Both Match</div>
+                            <div class="legend-item"><span class="legend-dot red"></span> Conflict</div>
+                            <div class="legend-item"><span class="legend-dot cyan"></span> Migration Ready</div>
+                            <div class="legend-item"><span class="legend-dot magenta"></span> No MDM Mapping</div>
+                        </div>
+                        <div class="filter-bar">
+                            <input type="text" id="overlap-search" placeholder="Search..." oninput="filterOverlapTable()">
+                            <select id="overlap-status-filter" onchange="filterOverlapTable()">
+                                <option value="">All Statuses</option>
+                                <option value="BothConfigured">Both Configured</option>
+                                <option value="GPOOnly_MappingExists">Migration Ready</option>
+                                <option value="GPOOnly_NoMapping">No MDM Mapping</option>
+                            </select>
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="overlap-table">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Category</th>
+                                        <th>Setting</th>
+                                        <th>GPO Value</th>
+                                        <th>MDM Setting</th>
+                                        <th>MDM Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${overlap.map(o => {
+                                        let rowClass = '';
+                                        let statusClass = '';
+                                        let statusText = '';
+
+                                        if (o.Status === 'BothConfigured') {
+                                            if (o.ValuesMatch) {
+                                                rowClass = 'status-both-match';
+                                                statusClass = 'both-match';
+                                                statusText = 'Match';
+                                            } else {
+                                                rowClass = 'status-both-conflict';
+                                                statusClass = 'conflict';
+                                                statusText = 'Conflict';
+                                            }
+                                        } else if (o.Status === 'GPOOnly_MappingExists') {
+                                            rowClass = 'status-gpo-mapping';
+                                            statusClass = 'migration-ready';
+                                            statusText = 'Migration Ready';
+                                        } else if (o.Status === 'GPOOnly_NoMapping') {
+                                            rowClass = 'status-gpo-nomapping';
+                                            statusClass = 'no-mapping';
+                                            statusText = 'No Mapping';
+                                        }
+
+                                        const mdmSetting = o.MDMArea && o.MDMSetting ? \`\${o.MDMArea}/\${o.MDMSetting}\` : '-';
+
+                                        return \`
+                                            <tr class="\${rowClass}" data-status="\${o.Status}">
+                                                <td><span class="status-tag \${statusClass}">\${statusText}</span></td>
+                                                <td>\${escapeHtml(o.Category || '-')}</td>
+                                                <td>\${escapeHtml(o.GPOValueName || '-')}</td>
+                                                <td>\${escapeHtml(formatValue(o.GPOValue))}</td>
+                                                <td>\${escapeHtml(mdmSetting)}</td>
+                                                <td>\${escapeHtml(formatValue(o.MDMValue))}</td>
+                                            </tr>
+                                        \`;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAppsSection(device) {
+            const appData = device.appData;
+            if (!appData?.Available || !appData?.AssignedApps?.length) {
+                return '';
+            }
+
+            const apps = appData.AssignedApps;
+            return `
+                <div class="section">
+                    <div class="section-header collapsed">
+                        <h2>App Assignments (${apps.length} assigned)</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body hidden">
+                        <div class="info-box info">Total apps in tenant: ${appData.Apps?.length || 0} | Assigned: ${apps.length}</div>
+                        ${apps.map(app => {
+                            const intents = (app.Assignments || []).map(a => {
+                                const intentClass = a.Intent?.toLowerCase() === 'required' ? 'required' : 'available';
+                                return \`<span class="app-intent \${intentClass}">\${escapeHtml(a.Intent || '')} - \${escapeHtml(a.TargetType || '')}</span>\`;
+                            }).join(' ');
+                            return \`
+                                <div class="app-card">
+                                    <div class="app-name">\${escapeHtml(app.DisplayName || 'Unknown App')}</div>
+                                    <div class="app-type">\${escapeHtml(app.AppType || '')} \${app.Publisher ? '- ' + escapeHtml(app.Publisher) : ''}</div>
+                                    \${intents}
+                                </div>
+                            \`;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGroupsSection(device) {
+            const groupData = device.groupData;
+            if (!groupData?.Available || !groupData?.DeviceFound || !groupData?.Groups?.length) {
+                return '';
+            }
+
+            const groups = groupData.Groups;
+            const deviceInfo = groupData.Device;
+            return `
+                <div class="section">
+                    <div class="section-header collapsed">
+                        <h2>Azure AD Device & Group Memberships (${groups.length} groups)</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body hidden">
+                        ${deviceInfo ? \`
+                            <div class="enrollment-grid">
+                                <div class="enrollment-item"><div class="key">Display Name</div><div class="value">\${escapeHtml(deviceInfo.DisplayName || '-')}</div></div>
+                                <div class="enrollment-item"><div class="key">Device ID</div><div class="value">\${escapeHtml(deviceInfo.DeviceId || '-')}</div></div>
+                                <div class="enrollment-item"><div class="key">OS</div><div class="value">\${escapeHtml(deviceInfo.OperatingSystem || '')} \${escapeHtml(deviceInfo.OSVersion || '')}</div></div>
+                                <div class="enrollment-item"><div class="key">Trust Type</div><div class="value">\${escapeHtml(deviceInfo.TrustType || '-')}</div></div>
+                                <div class="enrollment-item"><div class="key">Managed</div><div class="value">\${deviceInfo.IsManaged || '-'}</div></div>
+                                <div class="enrollment-item"><div class="key">Compliant</div><div class="value">\${deviceInfo.IsCompliant || '-'}</div></div>
+                            </div>
+                            <hr style="border-color: var(--border-color); margin: 15px 0;">
+                        \` : ''}
+                        <h3 style="margin-bottom: 10px; font-size: 1rem;">Group Memberships</h3>
+                        <div class="info-box info">[D] = Dynamic membership | [A] = Assigned membership</div>
+                        <div class="group-list">
+                            \${groups.map(g => {
+                                const typeClass = g.GroupType === 'Dynamic' ? 'dynamic' : 'assigned';
+                                const typeLabel = g.GroupType === 'Dynamic' ? '[D]' : '[A]';
+                                return \`<span class="group-chip \${typeClass}" title="\${escapeHtml(g.Description || 'No description')}">\${typeLabel} \${escapeHtml(g.DisplayName || 'Unknown Group')}</span>\`;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Comparison rendering
+        function renderCompareView(device1, device2) {
+            const container = document.getElementById('compare-content');
+            const name1 = device1.device?.computerName || 'Device A';
+            const name2 = device2.device?.computerName || 'Device B';
+
+            // Compute diffs
+            const gpoDiff = computeGPODiff(device1, device2);
+            const mdmDiff = computeMDMDiff(device1, device2);
+
+            const gpo1Count = device1.gpoData?.RegistryPolicies?.length || 0;
+            const gpo2Count = device2.gpoData?.RegistryPolicies?.length || 0;
+            const mdm1Count = (device1.mdmData?.DevicePolicies?.length || 0) + (device1.mdmData?.UserPolicies?.length || 0);
+            const mdm2Count = (device2.mdmData?.DevicePolicies?.length || 0) + (device2.mdmData?.UserPolicies?.length || 0);
+
+            container.innerHTML = `
+                <div class="report-header">
+                    <h1>Device Comparison</h1>
+                    <div class="subtitle">${escapeHtml(name1)} vs ${escapeHtml(name2)}</div>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-dot red"></span> Unique to ${escapeHtml(name1)}</div>
+                    <div class="legend-item"><span class="legend-dot green"></span> Unique to ${escapeHtml(name2)}</div>
+                    <div class="legend-item" style="background: rgba(229, 192, 123, 0.15); padding: 5px 10px; border-radius: 4px;">Value Mismatch</div>
+                </div>
+
+                <div class="compare-grid">
+                    <div class="compare-column">
+                        <div class="compare-header">
+                            <strong>${escapeHtml(name1)}</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                ${gpo1Count} GPO, ${mdm1Count} MDM
+                            </div>
+                        </div>
+                    </div>
+                    <div class="compare-column">
+                        <div class="compare-header">
+                            <strong>${escapeHtml(name2)}</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                ${gpo2Count} GPO, ${mdm2Count} MDM
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${renderGPODiffSection(gpoDiff, name1, name2)}
+                ${renderMDMDiffSection(mdmDiff, name1, name2)}
+            `;
+
+            initCollapsibles();
+        }
+
+        function computeGPODiff(device1, device2) {
+            const settings1 = device1.gpoData?.RegistryPolicies || [];
+            const settings2 = device2.gpoData?.RegistryPolicies || [];
+
+            const keyFn = (s) => `${s.Path || ''}|${s.ValueName || ''}|${s.Scope || ''}`;
+
+            return computeDiff(settings1, settings2, keyFn, (s) => s.Data);
+        }
+
+        function computeMDMDiff(device1, device2) {
+            const policies1 = [...(device1.mdmData?.DevicePolicies || []), ...(device1.mdmData?.UserPolicies || [])];
+            const policies2 = [...(device2.mdmData?.DevicePolicies || []), ...(device2.mdmData?.UserPolicies || [])];
+
+            const keyFn = (p) => `${p.Area || ''}|${p.Setting || ''}|${p.Scope || ''}`;
+
+            return computeDiff(policies1, policies2, keyFn, (p) => p.Value);
+        }
+
+        function computeDiff(data1, data2, keyFn, valueFn) {
+            const map1 = new Map();
+            const map2 = new Map();
+
+            data1.forEach(item => map1.set(keyFn(item), { item, value: valueFn(item) }));
+            data2.forEach(item => map2.set(keyFn(item), { item, value: valueFn(item) }));
+
+            const result = {
+                identical: [],
+                valueMismatch: [],
+                uniqueToA: [],
+                uniqueToB: []
+            };
+
+            // Check items in data1
+            map1.forEach((entry1, key) => {
+                if (map2.has(key)) {
+                    const entry2 = map2.get(key);
+                    const val1 = JSON.stringify(entry1.value);
+                    const val2 = JSON.stringify(entry2.value);
+
+                    if (val1 === val2) {
+                        result.identical.push({ key, itemA: entry1.item, itemB: entry2.item });
+                    } else {
+                        result.valueMismatch.push({ key, itemA: entry1.item, itemB: entry2.item });
+                    }
+                } else {
+                    result.uniqueToA.push({ key, item: entry1.item });
+                }
+            });
+
+            // Check items only in data2
+            map2.forEach((entry2, key) => {
+                if (!map1.has(key)) {
+                    result.uniqueToB.push({ key, item: entry2.item });
+                }
+            });
+
+            return result;
+        }
+
+        function renderGPODiffSection(diff, name1, name2) {
+            const total = diff.identical.length + diff.valueMismatch.length + diff.uniqueToA.length + diff.uniqueToB.length;
+
+            if (total === 0) {
+                return `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>GPO Comparison</h2>
+                            <span class="toggle">&#9660;</span>
+                        </div>
+                        <div class="section-body">
+                            <p style="color: var(--text-secondary);">No GPO settings to compare.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>GPO Comparison (${diff.identical.length} identical, ${diff.valueMismatch.length} mismatched, ${diff.uniqueToA.length} unique to A, ${diff.uniqueToB.length} unique to B)</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="summary-grid">
+                            <div class="summary-card green">
+                                <span class="number">${diff.identical.length}</span>
+                                <span class="label">Identical</span>
+                            </div>
+                            <div class="summary-card yellow">
+                                <span class="number">${diff.valueMismatch.length}</span>
+                                <span class="label">Value Mismatch</span>
+                            </div>
+                            <div class="summary-card red">
+                                <span class="number">${diff.uniqueToA.length}</span>
+                                <span class="label">Only in ${escapeHtml(name1)}</span>
+                            </div>
+                            <div class="summary-card cyan">
+                                <span class="number">${diff.uniqueToB.length}</span>
+                                <span class="label">Only in ${escapeHtml(name2)}</span>
+                            </div>
+                        </div>
+                        <div class="filter-bar">
+                            <input type="text" id="gpo-diff-search" placeholder="Search GPO comparison..." oninput="filterTable('gpo-diff-table', 'gpo-diff-search')">
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="gpo-diff-table">
+                                <thead>
+                                    <tr>
+                                        <th>Path</th>
+                                        <th>Value Name</th>
+                                        <th>Value (${escapeHtml(name1)})</th>
+                                        <th>Value (${escapeHtml(name2)})</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${diff.valueMismatch.map(d => `
+                                        <tr class="diff-value-mismatch">
+                                            <td>${escapeHtml(d.itemA.Path || '')}</td>
+                                            <td>${escapeHtml(d.itemA.ValueName || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.itemA.Data))}</td>
+                                            <td>${escapeHtml(formatValue(d.itemB.Data))}</td>
+                                            <td><span class="status-tag conflict">Mismatch</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.uniqueToA.map(d => `
+                                        <tr class="diff-unique-a">
+                                            <td>${escapeHtml(d.item.Path || '')}</td>
+                                            <td>${escapeHtml(d.item.ValueName || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.item.Data))}</td>
+                                            <td>-</td>
+                                            <td><span class="status-tag no-mapping">Only A</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.uniqueToB.map(d => `
+                                        <tr class="diff-unique-b">
+                                            <td>${escapeHtml(d.item.Path || '')}</td>
+                                            <td>${escapeHtml(d.item.ValueName || '')}</td>
+                                            <td>-</td>
+                                            <td>${escapeHtml(formatValue(d.item.Data))}</td>
+                                            <td><span class="status-tag migration-ready">Only B</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.identical.map(d => `
+                                        <tr class="diff-identical">
+                                            <td>${escapeHtml(d.itemA.Path || '')}</td>
+                                            <td>${escapeHtml(d.itemA.ValueName || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.itemA.Data))}</td>
+                                            <td>${escapeHtml(formatValue(d.itemB.Data))}</td>
+                                            <td><span class="status-tag both-match">Identical</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMDMDiffSection(diff, name1, name2) {
+            const total = diff.identical.length + diff.valueMismatch.length + diff.uniqueToA.length + diff.uniqueToB.length;
+
+            if (total === 0) {
+                return `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>MDM Comparison</h2>
+                            <span class="toggle">&#9660;</span>
+                        </div>
+                        <div class="section-body">
+                            <p style="color: var(--text-secondary);">No MDM policies to compare.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>MDM Comparison (${diff.identical.length} identical, ${diff.valueMismatch.length} mismatched, ${diff.uniqueToA.length} unique to A, ${diff.uniqueToB.length} unique to B)</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="summary-grid">
+                            <div class="summary-card green">
+                                <span class="number">${diff.identical.length}</span>
+                                <span class="label">Identical</span>
+                            </div>
+                            <div class="summary-card yellow">
+                                <span class="number">${diff.valueMismatch.length}</span>
+                                <span class="label">Value Mismatch</span>
+                            </div>
+                            <div class="summary-card red">
+                                <span class="number">${diff.uniqueToA.length}</span>
+                                <span class="label">Only in ${escapeHtml(name1)}</span>
+                            </div>
+                            <div class="summary-card cyan">
+                                <span class="number">${diff.uniqueToB.length}</span>
+                                <span class="label">Only in ${escapeHtml(name2)}</span>
+                            </div>
+                        </div>
+                        <div class="filter-bar">
+                            <input type="text" id="mdm-diff-search" placeholder="Search MDM comparison..." oninput="filterTable('mdm-diff-table', 'mdm-diff-search')">
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="mdm-diff-table">
+                                <thead>
+                                    <tr>
+                                        <th>Area</th>
+                                        <th>Setting</th>
+                                        <th>Value (${escapeHtml(name1)})</th>
+                                        <th>Value (${escapeHtml(name2)})</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${diff.valueMismatch.map(d => `
+                                        <tr class="diff-value-mismatch">
+                                            <td>${escapeHtml(d.itemA.Area || '')}</td>
+                                            <td>${escapeHtml(d.itemA.Setting || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.itemA.Value))}</td>
+                                            <td>${escapeHtml(formatValue(d.itemB.Value))}</td>
+                                            <td><span class="status-tag conflict">Mismatch</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.uniqueToA.map(d => `
+                                        <tr class="diff-unique-a">
+                                            <td>${escapeHtml(d.item.Area || '')}</td>
+                                            <td>${escapeHtml(d.item.Setting || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.item.Value))}</td>
+                                            <td>-</td>
+                                            <td><span class="status-tag no-mapping">Only A</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.uniqueToB.map(d => `
+                                        <tr class="diff-unique-b">
+                                            <td>${escapeHtml(d.item.Area || '')}</td>
+                                            <td>${escapeHtml(d.item.Setting || '')}</td>
+                                            <td>-</td>
+                                            <td>${escapeHtml(formatValue(d.item.Value))}</td>
+                                            <td><span class="status-tag migration-ready">Only B</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.identical.map(d => `
+                                        <tr class="diff-identical">
+                                            <td>${escapeHtml(d.itemA.Area || '')}</td>
+                                            <td>${escapeHtml(d.itemA.Setting || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.itemA.Value))}</td>
+                                            <td>${escapeHtml(formatValue(d.itemB.Value))}</td>
+                                            <td><span class="status-tag both-match">Identical</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Filtering
+        function filterTable(tableId, searchId) {
+            const searchValue = document.getElementById(searchId).value.toLowerCase();
+            const table = document.getElementById(tableId);
+            const rows = table.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchValue) ? '' : 'none';
+            });
+        }
+
+        function filterOverlapTable() {
+            const searchValue = document.getElementById('overlap-search').value.toLowerCase();
+            const statusFilter = document.getElementById('overlap-status-filter').value;
+            const table = document.getElementById('overlap-table');
+            const rows = table.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const status = row.dataset.status;
+                const matchesSearch = text.includes(searchValue);
+                const matchesStatus = !statusFilter || status === statusFilter;
+                row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+            });
+        }
+
+        // Collapsible sections
+        function initCollapsibles() {
+            document.querySelectorAll('.section-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    this.classList.toggle('collapsed');
+                    const body = this.nextElementSibling;
+                    body.classList.toggle('hidden');
+                });
+            });
+        }
+
+        // Helpers
+        function formatValue(val) {
+            if (val === null || val === undefined) return '-';
+            if (typeof val === 'object') return JSON.stringify(val);
+            return String(val);
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = String(str);
+            return div.innerHTML;
+        }
+
+        function formatDate(isoString) {
+            if (!isoString) return '';
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleString();
+            } catch {
+                return isoString;
+            }
+        }
+    </script>
+</body>
+</html>

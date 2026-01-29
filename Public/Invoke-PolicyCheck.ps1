@@ -15,12 +15,19 @@ function Invoke-PolicyCheck {
         Path for the HTML report file. Defaults to a timestamped file in the current directory.
     .PARAMETER SkipMDMDiag
         Skip running mdmdiagnosticstool (can be slow on some devices).
+    .PARAMETER ExportJson
+        Export results to a JSON file for use with the PolicyCheck Viewer web tool.
+    .PARAMETER JsonPath
+        Path for the JSON export file. Defaults to a timestamped file in the current directory.
     .EXAMPLE
         Invoke-PolicyCheck
         Runs a local-only scan and generates an HTML report.
     .EXAMPLE
         Invoke-PolicyCheck -IncludeGraph -TenantId "contoso.onmicrosoft.com"
         Runs a full scan including Graph API queries for Intune metadata.
+    .EXAMPLE
+        Invoke-PolicyCheck -ExportJson -JsonPath "C:\Reports\device1.json"
+        Runs a local scan and exports results to a JSON file for the web viewer.
     .OUTPUTS
         PSCustomObject with all collected data, analysis results, and report path.
     #>
@@ -32,7 +39,11 @@ function Invoke-PolicyCheck {
 
         [string]$OutputPath = ".\PolicyCheck_Report_$(Get-Date -Format 'yyyyMMdd_HHmmss').html",
 
-        [switch]$SkipMDMDiag
+        [switch]$SkipMDMDiag,
+
+        [switch]$ExportJson,
+
+        [string]$JsonPath = ".\PolicyCheck_$($env:COMPUTERNAME)_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
     )
 
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -162,7 +173,7 @@ function Invoke-PolicyCheck {
     Write-Host ""
 
     # Return structured object for pipeline usage
-    [PSCustomObject]@{
+    $result = [PSCustomObject]@{
         GPOData    = $gpoData
         MDMData    = $mdmData
         GraphData  = $graphData
@@ -171,4 +182,12 @@ function Invoke-PolicyCheck {
         Analysis   = $analysis
         ReportPath = $reportPath
     }
+
+    if ($ExportJson) {
+        $jsonExportPath = ConvertTo-JsonExport -Result $result -OutputPath $JsonPath
+        Write-Host "  JSON export saved to: $jsonExportPath" -ForegroundColor Green
+        $result | Add-Member -NotePropertyName 'JsonPath' -NotePropertyValue $jsonExportPath
+    }
+
+    return $result
 }
