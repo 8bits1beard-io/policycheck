@@ -1531,11 +1531,14 @@
             return `
                 <div class="section">
                     <div class="section-header collapsed">
-                        <h2>App Assignments (${apps.length} assigned)</h2>
+                        <h2>Intune App Assignments (${apps.length} assigned)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
-                        <div class="info-box info">Total apps in tenant: ${appData.Apps?.length || 0} | Assigned: ${apps.length}</div>
+                        <div class="info-box explanation">
+                            Applications deployed via Microsoft Intune. Shows apps assigned to this device or its groups.
+                        </div>
+                        <div class="info-box info">Total apps in tenant: ${appData.Apps?.length || 0} | Assigned to this device: ${apps.length}</div>
                         ${apps.map(app => {
                             const intents = (app.Assignments || []).map(a => {
                                 const intentClass = a.Intent?.toLowerCase() === 'required' ? 'required' : 'available';
@@ -1595,8 +1598,155 @@
         }
 
         function renderProfilesSection(device) {
-            // Placeholder for future profiles section
-            return '';
+            const graphData = device.graphData;
+            if (!graphData?.Available) {
+                return '';
+            }
+
+            const profiles = graphData.Profiles || [];
+            const compliance = graphData.CompliancePolicies || [];
+            const settingsCatalog = graphData.SettingsCatalog || [];
+            const totalCount = profiles.length + compliance.length + settingsCatalog.length;
+
+            if (totalCount === 0) {
+                return '';
+            }
+
+            let profilesHtml = '';
+            if (profiles.length > 0) {
+                profilesHtml = `
+                    <h3 style="margin: 15px 0 10px; color: var(--text-secondary);">Device Configuration Profiles (${profiles.length})</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Assignments</th>
+                                    <th>Last Modified</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${profiles.map(p => {
+                                    const profileType = (p.OdataType || '').replace('#microsoft.graph.', '').replace(/([A-Z])/g, ' $1').trim();
+                                    const assignmentCount = (p.Assignments || []).length;
+                                    const assignmentText = assignmentCount > 0 ?
+                                        (p.Assignments || []).map(a => formatAssignmentTarget(a.TargetType)).join(', ') :
+                                        'None';
+                                    return `
+                                        <tr>
+                                            <td><strong>${escapeHtml(p.DisplayName || '')}</strong></td>
+                                            <td style="font-size: 0.85rem;">${escapeHtml(profileType)}</td>
+                                            <td>${escapeHtml(assignmentText)}</td>
+                                            <td>${p.LastModified ? new Date(p.LastModified).toLocaleDateString() : '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            let complianceHtml = '';
+            if (compliance.length > 0) {
+                complianceHtml = `
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Compliance Policies (${compliance.length})</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Assignments</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${compliance.map(p => {
+                                    const policyType = (p.OdataType || '').replace('#microsoft.graph.', '').replace(/([A-Z])/g, ' $1').trim();
+                                    const assignmentCount = (p.Assignments || []).length;
+                                    const assignmentText = assignmentCount > 0 ?
+                                        (p.Assignments || []).map(a => formatAssignmentTarget(a.TargetType)).join(', ') :
+                                        'None';
+                                    return `
+                                        <tr>
+                                            <td><strong>${escapeHtml(p.DisplayName || '')}</strong></td>
+                                            <td style="font-size: 0.85rem;">${escapeHtml(policyType)}</td>
+                                            <td>${escapeHtml(assignmentText)}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            let catalogHtml = '';
+            if (settingsCatalog.length > 0) {
+                catalogHtml = `
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Settings Catalog Policies (${settingsCatalog.length})</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Platform</th>
+                                    <th>Technologies</th>
+                                    <th>Assignments</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${settingsCatalog.map(p => {
+                                    const assignmentCount = (p.Assignments || []).length;
+                                    const assignmentText = assignmentCount > 0 ?
+                                        (p.Assignments || []).map(a => formatAssignmentTarget(a.TargetType)).join(', ') :
+                                        'None';
+                                    return `
+                                        <tr>
+                                            <td><strong>${escapeHtml(p.Name || '')}</strong></td>
+                                            <td>${escapeHtml(p.Platforms || '-')}</td>
+                                            <td>${escapeHtml(p.Technologies || '-')}</td>
+                                            <td>${escapeHtml(assignmentText)}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Intune Configuration Profiles (${totalCount} policies)</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="info-box explanation">
+                            Configuration profiles, compliance policies, and Settings Catalog policies defined in Microsoft Intune.
+                            These are the policies that could be applying MDM settings to this device.
+                        </div>
+                        ${profilesHtml}
+                        ${complianceHtml}
+                        ${catalogHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatAssignmentTarget(targetType) {
+            if (!targetType) return 'Unknown';
+            // Clean up the OData type to human readable
+            const type = targetType.replace('#microsoft.graph.', '');
+            switch (type) {
+                case 'allDevicesAssignmentTarget': return 'All Devices';
+                case 'allLicensedUsersAssignmentTarget': return 'All Users';
+                case 'groupAssignmentTarget': return 'Group';
+                case 'exclusionGroupAssignmentTarget': return 'Exclude Group';
+                default: return type.replace(/AssignmentTarget$/, '').replace(/([A-Z])/g, ' $1').trim();
+            }
         }
 
         // Comparison rendering
