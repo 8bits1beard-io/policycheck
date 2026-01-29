@@ -136,7 +136,7 @@ function Invoke-PolicyCheck {
                 }
                 if ($TenantId) { $connectParams['TenantId'] = $TenantId }
 
-                Connect-MgGraph @connectParams -ErrorAction Stop
+                Connect-MgGraph @connectParams -ErrorAction Stop | Out-Null
                 Write-Host "        Connected successfully" -ForegroundColor Gray
                 Write-PolicyCheckLog "Phase 3: Graph connected successfully" -Level Info
 

@@ -53,7 +53,7 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
             }
 
             Write-Host "  Connecting to Microsoft Graph (browser auth)..." -ForegroundColor Gray
-            Connect-MgGraph @connectParams -ErrorAction Stop
+            Connect-MgGraph @connectParams -ErrorAction Stop | Out-Null
             Write-Verbose "Connected to Microsoft Graph successfully."
         }
         catch {
