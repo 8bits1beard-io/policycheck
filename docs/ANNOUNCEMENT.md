@@ -1,38 +1,44 @@
-# Introducing PolicyLens
+# PolicyLens
 
-We are pleased to announce **PolicyLens**, a new PowerShell diagnostic tool designed to simplify policy management and GPO-to-Intune migration planning.
+A tool I built to help answer: **"What's actually being applied to this device, and where is it coming from?"**
 
 ## What It Does
 
-PolicyLens scans Windows devices to collect and analyze policies from multiple sources:
+Run a PowerShell script on a Windows device and it collects:
 
-- **Group Policy (GPO)** - Local and domain-applied policies
-- **Intune/MDM** - Mobile Device Management policies and configurations
-- **SCCM** - Configuration Manager policies
+- **Group Policy** - All applied GPOs and their registry-based settings
+- **Intune/MDM** - Policies pushed via MDM enrollment
+- **SCCM** - ConfigMgr apps, baselines, and updates
+- **Azure AD Groups** - Which groups the device belongs to (with `-IncludeGraph`)
+- **Intune Assignments** - Which Intune policies and apps target this device based on group membership
 
-The tool identifies conflicts between GPO and Intune settings, shows which Intune policies and apps are assigned to a device through group membership, and exports results to JSON for review in the included web viewer.
+Everything exports to a JSON file that you open in the included web viewer.
 
-## Key Benefits
+## What the Viewer Shows
 
-- **Migration Planning** - Understand policy overlap before transitioning from GPO to Intune
-- **Conflict Detection** - Identify settings configured in both GPO and Intune
-- **Device Comparison** - Use the web viewer to compare policies across multiple devices
-- **Safe to Run** - Read-only operation; no changes are made to the device
+- Summary of policy counts from each source
+- GPO vs Intune overlap analysis (what's configured in both, what conflicts)
+- Intune policies filtered to only those assigned to the scanned device
+- Intune apps filtered the same way
+- Azure AD group memberships (separated by Dynamic vs Assigned)
+- Side-by-side comparison when you load two device exports
 
-## How to Use
-
-Run from an elevated PowerShell prompt on the target device:
+## How to Run
 
 ```powershell
-# Basic scan (GPO and local MDM policies)
+# Basic scan
 .\PolicyLens.ps1
 
-# Include Intune assignments via Microsoft Graph
+# Full scan with Intune assignments and group memberships
 .\PolicyLens.ps1 -IncludeGraph
 ```
 
-Results are exported to JSON and can be viewed using the included web viewer in the Tools folder.
+Requires admin rights for full results. The `-IncludeGraph` flag connects to Microsoft Graph (opens browser for auth).
+
+## Coming Soon
+
+**Settings Catalog Lookup** - Query Microsoft's Graph API to check if a GPO setting has an Intune equivalent, instead of relying only on our local mapping file. This will improve accuracy of the migration readiness analysis.
 
 ---
 
-For questions or feedback, please reach out to the team.
+Questions or feedback welcome.
