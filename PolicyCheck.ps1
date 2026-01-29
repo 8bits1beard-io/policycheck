@@ -14,6 +14,8 @@
     Skip running mdmdiagnosticstool (can be slow on some devices).
 .PARAMETER OutputPath
     Path for the JSON export file. Defaults to a timestamped file in the current directory.
+.PARAMETER LogPath
+    Path for the operational log file. Defaults to PolicyCheck.log in LocalAppData.
 .EXAMPLE
     .\PolicyCheck.ps1
     Runs a local-only scan and exports results to JSON.
@@ -29,7 +31,8 @@ param(
     [switch]$IncludeGraph,
     [string]$TenantId,
     [switch]$SkipMDMDiag,
-    [string]$OutputPath
+    [string]$OutputPath,
+    [string]$LogPath
 )
 
 # Add System.Web for HTML encoding in report generation
@@ -44,5 +47,6 @@ if ($IncludeGraph) { $params['IncludeGraph'] = $true }
 if ($TenantId) { $params['TenantId'] = $TenantId }
 if ($SkipMDMDiag) { $params['SkipMDMDiag'] = $true }
 if ($OutputPath) { $params['OutputPath'] = $OutputPath }
+if ($LogPath) { $params['LogPath'] = $LogPath }
 
 Invoke-PolicyCheck @params
