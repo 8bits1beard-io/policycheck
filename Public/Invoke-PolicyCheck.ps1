@@ -142,7 +142,7 @@ function Invoke-PolicyCheck {
 
                 # Get policy data
                 Write-Host "        Fetching Intune configuration profiles..." -ForegroundColor Gray
-                $graphData = Get-GraphPolicyData -TenantId $TenantId
+                $graphData = Get-GraphPolicyData -TenantId $TenantId -GraphConnected
                 if ($graphData.Available) {
                     $totalProfiles = $graphData.Profiles.Count + $graphData.CompliancePolicies.Count + $graphData.SettingsCatalog.Count
                     Write-Host "        Found $totalProfiles profiles/policies" -ForegroundColor Gray
@@ -175,14 +175,16 @@ function Invoke-PolicyCheck {
                     Write-PolicyCheckLog "Phase 5: Device not found in Azure AD" -Level Warning
                 }
 
-                # Disconnect
-                Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-                Write-PolicyCheckLog "Phase 5: Graph disconnected" -Level Info
             }
             catch {
                 Write-Host "  [!] Graph connection failed: $_" -ForegroundColor Red
                 Write-Host "      Continuing with local data only." -ForegroundColor Yellow
                 Write-PolicyCheckLog "Phase 3: Graph connection failed - $_" -Level Error
+            }
+            finally {
+                # Always disconnect from Graph if we connected
+                Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+                Write-PolicyCheckLog "Graph: Disconnected" -Level Info
             }
         }
     }

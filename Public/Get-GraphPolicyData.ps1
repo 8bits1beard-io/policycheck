@@ -7,13 +7,17 @@ function Get-GraphPolicyData {
         compliance policies, and Settings Catalog policies with their assignments.
     .PARAMETER TenantId
         Azure AD tenant ID for authentication.
+    .PARAMETER GraphConnected
+        Skip connecting/disconnecting from Graph (caller manages the connection).
     .OUTPUTS
         PSCustomObject with profiles, compliance policies, and settings catalog data.
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
     param(
-        [string]$TenantId
+        [string]$TenantId,
+
+        [switch]$GraphConnected
     )
 
     Write-Verbose "Querying Microsoft Graph API for Intune policy data..."
@@ -35,30 +39,32 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
         }
     }
 
-    # --- 2. Connect to Graph ---
-    try {
-        $connectParams = @{
-            Scopes = @(
-                'DeviceManagementConfiguration.Read.All'
-                'DeviceManagementManagedDevices.Read.All'
-            )
-        }
-        if ($TenantId) {
-            $connectParams['TenantId'] = $TenantId
-        }
+    # --- 2. Connect to Graph (if not already connected) ---
+    if (-not $GraphConnected) {
+        try {
+            $connectParams = @{
+                Scopes = @(
+                    'DeviceManagementConfiguration.Read.All'
+                    'DeviceManagementManagedDevices.Read.All'
+                )
+            }
+            if ($TenantId) {
+                $connectParams['TenantId'] = $TenantId
+            }
 
-        Write-Host "  Connecting to Microsoft Graph (browser auth)..." -ForegroundColor Gray
-        Connect-MgGraph @connectParams -ErrorAction Stop
-        Write-Verbose "Connected to Microsoft Graph successfully."
-    }
-    catch {
-        Write-Warning "Failed to connect to Microsoft Graph: $_"
-        return [PSCustomObject]@{
-            Available          = $false
-            Profiles           = @()
-            CompliancePolicies = @()
-            SettingsCatalog    = @()
-            CollectedAt        = Get-Date
+            Write-Host "  Connecting to Microsoft Graph (browser auth)..." -ForegroundColor Gray
+            Connect-MgGraph @connectParams -ErrorAction Stop
+            Write-Verbose "Connected to Microsoft Graph successfully."
+        }
+        catch {
+            Write-Warning "Failed to connect to Microsoft Graph: $_"
+            return [PSCustomObject]@{
+                Available          = $false
+                Profiles           = @()
+                CompliancePolicies = @()
+                SettingsCatalog    = @()
+                CollectedAt        = Get-Date
+            }
         }
     }
 
@@ -175,11 +181,13 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
         Write-Verbose "Could not retrieve Settings Catalog policies (beta): $_"
     }
 
-    # --- 6. Disconnect ---
-    try {
-        Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+    # --- 6. Disconnect (only if we connected) ---
+    if (-not $GraphConnected) {
+        try {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+        }
+        catch { }
     }
-    catch { }
 
     [PSCustomObject]@{
         Available          = $true
