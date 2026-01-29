@@ -42,7 +42,6 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
                 'DeviceManagementConfiguration.Read.All'
                 'DeviceManagementManagedDevices.Read.All'
             )
-            NoWelcome = $true
         }
         if ($TenantId) {
             $connectParams['TenantId'] = $TenantId
