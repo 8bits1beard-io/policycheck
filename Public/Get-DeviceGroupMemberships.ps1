@@ -8,13 +8,23 @@ function Get-DeviceGroupMemberships {
         Requires an active Microsoft Graph connection.
     .PARAMETER GraphConnected
         Indicates Graph is already connected (called from Invoke-PolicyLens).
+    .PARAMETER DeviceName
+        The name of the device to look up in Azure AD. Defaults to the local computer name.
+        Use this when scanning a remote device.
+    .PARAMETER DeviceId
+        The Azure AD device ID (GUID) for precise device lookup. When provided, skips
+        local registry/dsregcmd lookup and uses this ID directly for Graph queries.
     .OUTPUTS
         PSCustomObject with device identity and group membership details.
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
     param(
-        [switch]$GraphConnected
+        [switch]$GraphConnected,
+
+        [string]$DeviceName,
+
+        [string]$DeviceId
     )
 
     Write-Verbose "Querying Microsoft Graph for device group memberships..."
@@ -37,37 +47,45 @@ function Get-DeviceGroupMemberships {
     $groups = @()
 
     # --- 1. Find the device in Azure AD ---
-    # Try multiple identification methods
-    $deviceName = $env:COMPUTERNAME
+    # Use provided parameters or fall back to local lookup
+    $targetDeviceName = if ($DeviceName) { $DeviceName } else { $env:COMPUTERNAME }
     $aadDeviceId = $null
 
-    # Check for AAD device ID in registry (most reliable)
-    $aadRegPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\CloudDomainJoin\JoinInfo'
-    if (Test-Path $aadRegPath) {
-        $joinInfo = Get-ChildItem $aadRegPath -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($joinInfo) {
-            $joinProps = Get-ItemProperty $joinInfo.PSPath -ErrorAction SilentlyContinue
-            $aadDeviceId = $joinInfo.PSChildName
-        }
+    # If DeviceId was provided, use it directly (remote scan scenario)
+    if ($DeviceId) {
+        $aadDeviceId = $DeviceId
+        Write-Verbose "Using provided AAD Device ID: $aadDeviceId"
     }
-
-    # Also try dsregcmd output for device ID
-    if (-not $aadDeviceId) {
-        try {
-            $dsreg = & dsregcmd /status 2>&1
-            $deviceIdLine = $dsreg | Where-Object { $_ -match 'DeviceId\s*:\s*(.+)' }
-            if ($deviceIdLine -and $Matches[1]) {
-                $aadDeviceId = $Matches[1].Trim()
+    # Only do local lookup if no DeviceId provided AND we're looking up the local machine
+    elseif (-not $DeviceName -or $DeviceName -eq $env:COMPUTERNAME) {
+        # Check for AAD device ID in registry (most reliable)
+        $aadRegPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\CloudDomainJoin\JoinInfo'
+        if (Test-Path $aadRegPath) {
+            $joinInfo = Get-ChildItem $aadRegPath -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($joinInfo) {
+                $joinProps = Get-ItemProperty $joinInfo.PSPath -ErrorAction SilentlyContinue
+                $aadDeviceId = $joinInfo.PSChildName
             }
         }
-        catch {
-            Write-Verbose "dsregcmd not available: $_"
+
+        # Also try dsregcmd output for device ID
+        if (-not $aadDeviceId) {
+            try {
+                $dsreg = & dsregcmd /status 2>&1
+                $deviceIdLine = $dsreg | Where-Object { $_ -match 'DeviceId\s*:\s*(.+)' }
+                if ($deviceIdLine -and $Matches[1]) {
+                    $aadDeviceId = $Matches[1].Trim()
+                }
+            }
+            catch {
+                Write-Verbose "dsregcmd not available: $_"
+            }
         }
     }
 
     try {
         # Search by device name first (works across scenarios)
-        $uri = "https://graph.microsoft.com/v1.0/devices?`$filter=displayName eq '$deviceName'"
+        $uri = "https://graph.microsoft.com/v1.0/devices?`$filter=displayName eq '$targetDeviceName'"
         $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
 
         if ($response.value.Count -gt 0) {
@@ -130,7 +148,7 @@ function Get-DeviceGroupMemberships {
                     }
                 })
 
-            Write-Verbose "Device '$deviceName' found. Member of $($groups.Count) groups."
+            Write-Verbose "Device '$targetDeviceName' found. Member of $($groups.Count) groups."
 
             # --- 3. Get registered owners ---
             try {
@@ -148,7 +166,7 @@ function Get-DeviceGroupMemberships {
             }
         }
         else {
-            Write-Warning "Device '$deviceName' not found in Azure AD. The device may not be Azure AD joined/registered."
+            Write-Warning "Device '$targetDeviceName' not found in Azure AD. The device may not be Azure AD joined/registered."
         }
     }
     catch {

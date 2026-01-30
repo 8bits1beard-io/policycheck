@@ -7,7 +7,8 @@ function ConvertTo-JsonExport {
         This function takes the output from Invoke-PolicyLens and exports it to a JSON file
         with a standardized schema. The export includes device metadata, all policy data sections,
         and analysis results. Device information is collected automatically including computer name,
-        OS version, and domain/Azure AD join status.
+        OS version, and domain/Azure AD join status, unless pre-collected metadata is provided
+        (for remote scan scenarios).
 
     .PARAMETER Result
         The PSCustomObject returned from Invoke-PolicyLens containing policy scan results.
@@ -16,6 +17,11 @@ function ConvertTo-JsonExport {
     .PARAMETER OutputPath
         The file path where the JSON export will be written. The path can be relative or absolute.
         Parent directories must exist.
+
+    .PARAMETER DeviceMetadata
+        Optional hashtable containing pre-collected device metadata from a remote scan.
+        When provided, this metadata is used instead of collecting from the local machine.
+        Expected keys: ComputerName, OSVersion, OSBuild, DomainJoined, AzureADJoined, HybridJoined
 
     .OUTPUTS
         System.String
@@ -40,49 +46,66 @@ function ConvertTo-JsonExport {
 
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        [string]$OutputPath
+        [string]$OutputPath,
+
+        [hashtable]$DeviceMetadata
     )
 
     process {
         Write-Verbose "Collecting device metadata..."
 
-        # Get computer name
-        $computerName = $env:COMPUTERNAME
+        # Use provided metadata (remote scan) or collect locally
+        if ($DeviceMetadata) {
+            Write-Verbose "Using pre-collected device metadata from remote scan"
+            $deviceInfo = [ordered]@{
+                computerName   = $DeviceMetadata.ComputerName
+                osVersion      = $DeviceMetadata.OSVersion
+                osBuild        = $DeviceMetadata.OSBuild
+                domainJoined   = $DeviceMetadata.DomainJoined
+                azureADJoined  = $DeviceMetadata.AzureADJoined
+                hybridJoined   = $DeviceMetadata.HybridJoined
+            }
+        }
+        else {
+            # Local collection
+            # Get computer name
+            $computerName = $env:COMPUTERNAME
 
-        # Get OS information
-        $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
-        $osVersion = if ($osInfo) { "$($osInfo.Caption) $($osInfo.Version)" } else { "Unknown" }
-        $osBuild = if ($osInfo) { $osInfo.BuildNumber } else { "Unknown" }
+            # Get OS information
+            $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+            $osVersion = if ($osInfo) { "$($osInfo.Caption) $($osInfo.Version)" } else { "Unknown" }
+            $osBuild = if ($osInfo) { $osInfo.BuildNumber } else { "Unknown" }
 
-        # Get domain join status
-        $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
-        $domainJoined = if ($computerSystem) { $computerSystem.PartOfDomain } else { $false }
+            # Get domain join status
+            $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
+            $domainJoined = if ($computerSystem) { $computerSystem.PartOfDomain } else { $false }
 
-        # Get Azure AD join status from registry
-        $azureADJoined = $false
-        $hybridJoined = $false
+            # Get Azure AD join status from registry
+            $azureADJoined = $false
+            $hybridJoined = $false
 
-        $joinInfoPath = "HKLM:\SYSTEM\CurrentControlSet\Control\CloudDomainJoin\JoinInfo"
-        if (Test-Path -Path $joinInfoPath) {
-            $joinInfoKeys = Get-ChildItem -Path $joinInfoPath -ErrorAction SilentlyContinue
-            if ($joinInfoKeys) {
-                $azureADJoined = $true
-                # If both domain joined and Azure AD joined, it's hybrid
-                $hybridJoined = $domainJoined -and $azureADJoined
+            $joinInfoPath = "HKLM:\SYSTEM\CurrentControlSet\Control\CloudDomainJoin\JoinInfo"
+            if (Test-Path -Path $joinInfoPath) {
+                $joinInfoKeys = Get-ChildItem -Path $joinInfoPath -ErrorAction SilentlyContinue
+                if ($joinInfoKeys) {
+                    $azureADJoined = $true
+                    # If both domain joined and Azure AD joined, it's hybrid
+                    $hybridJoined = $domainJoined -and $azureADJoined
+                }
+            }
+
+            # Build the device metadata object
+            $deviceInfo = [ordered]@{
+                computerName   = $computerName
+                osVersion      = $osVersion
+                osBuild        = $osBuild
+                domainJoined   = $domainJoined
+                azureADJoined  = $azureADJoined
+                hybridJoined   = $hybridJoined
             }
         }
 
         Write-Verbose "Building export structure..."
-
-        # Build the device metadata object
-        $deviceInfo = [ordered]@{
-            computerName   = $computerName
-            osVersion      = $osVersion
-            osBuild        = $osBuild
-            domainJoined   = $domainJoined
-            azureADJoined  = $azureADJoined
-            hybridJoined   = $hybridJoined
-        }
 
         # Build the complete export object
         $exportObject = [ordered]@{

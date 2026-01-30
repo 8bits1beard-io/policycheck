@@ -8,13 +8,18 @@ function Get-DeviceAppAssignments {
         Requires an active Microsoft Graph connection (call after Connect-MgGraph).
     .PARAMETER GraphConnected
         Indicates Graph is already connected (called from Invoke-PolicyLens).
+    .PARAMETER SkipLocalApps
+        Skip the local Win32Apps registry enumeration. Use this when scanning a
+        remote device where the local registry is not relevant.
     .OUTPUTS
         PSCustomObject with app assignment details.
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
     param(
-        [switch]$GraphConnected
+        [switch]$GraphConnected,
+
+        [switch]$SkipLocalApps
     )
 
     Write-Verbose "Querying Microsoft Graph for app assignments..."
@@ -116,20 +121,24 @@ function Get-DeviceAppAssignments {
     }
 
     # --- 2. Get locally installed Intune-managed apps (from registry) ---
+    # Skip this for remote scans where local registry is not relevant
     $localApps = @()
-    $imePath = 'HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps'
 
-    if (Test-Path $imePath) {
-        $userFolders = Get-ChildItem $imePath -ErrorAction SilentlyContinue
-        foreach ($userFolder in $userFolders) {
-            $appFolders = Get-ChildItem $userFolder.PSPath -ErrorAction SilentlyContinue
-            foreach ($appFolder in $appFolders) {
-                $props = Get-ItemProperty $appFolder.PSPath -ErrorAction SilentlyContinue
-                if ($props) {
-                    $localApps += [PSCustomObject]@{
-                        AppId   = $appFolder.PSChildName
-                        UserId  = $userFolder.PSChildName
-                        Result  = $props.Result
+    if (-not $SkipLocalApps) {
+        $imePath = 'HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps'
+
+        if (Test-Path $imePath) {
+            $userFolders = Get-ChildItem $imePath -ErrorAction SilentlyContinue
+            foreach ($userFolder in $userFolders) {
+                $appFolders = Get-ChildItem $userFolder.PSPath -ErrorAction SilentlyContinue
+                foreach ($appFolder in $appFolders) {
+                    $props = Get-ItemProperty $appFolder.PSPath -ErrorAction SilentlyContinue
+                    if ($props) {
+                        $localApps += [PSCustomObject]@{
+                            AppId   = $appFolder.PSChildName
+                            UserId  = $userFolder.PSChildName
+                            Result  = $props.Result
+                        }
                     }
                 }
             }
