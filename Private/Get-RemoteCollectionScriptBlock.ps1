@@ -127,7 +127,7 @@ function Get-RemoteCollectionScriptBlock {
 
             try {
                 $proc = Start-Process -FilePath 'gpresult.exe' `
-                    -ArgumentList "/x `"$tempXml`" /f" `
+                    -ArgumentList "/x `"$tempXml`" /f /scope:computer" `
                     -NoNewWindow -Wait -PassThru -ErrorAction Stop
 
                 if ($proc.ExitCode -eq 0 -and (Test-Path $tempXml)) {
