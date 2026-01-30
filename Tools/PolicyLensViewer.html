@@ -114,6 +114,47 @@
             margin-top: 4px;
         }
 
+        /* Summary Sections - Grouped card layout */
+        .summary-section {
+            margin-bottom: 20px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-section-header {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .summary-section .summary-grid {
+            margin-bottom: 0;
+        }
+
+        .summary-card.status .number {
+            font-size: 1.2rem;
+        }
+
+        .summary-card.status .status-icon {
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .summary-card.status .status-icon.check::before {
+            content: "\2713";
+            color: var(--accent-green);
+        }
+
+        .summary-card.status .status-icon.x::before {
+            content: "\2717";
+            color: var(--accent-red);
+        }
+
         /* Welcome Panel */
         .welcome-panel {
             background: var(--bg-secondary);
@@ -964,7 +1005,8 @@
             container.innerHTML = AppState.devices.map((device, index) => {
                 const name = device.device?.computerName || 'Unknown Device';
                 const date = device.exportedAt ? formatDate(device.exportedAt) : 'Unknown date';
-                const gpoCount = device.gpoData?.RegistryPolicies?.length || 0;
+                const gpoObjectCount = device.gpoData?.TotalGPOCount || 0;
+                const gpoSettingsCount = device.gpoData?.RegistryPolicies?.length || 0;
                 const mdmCount = (device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0);
                 const isSelected = AppState.selectedDevices.includes(index);
 
@@ -973,7 +1015,7 @@
                         <span class="remove" onclick="removeDevice(${index}, event)">&times;</span>
                         <div class="name">${escapeHtml(name)}</div>
                         <div class="info">${escapeHtml(date)}</div>
-                        <div class="info">${gpoCount} GPO settings, ${mdmCount} MDM policies</div>
+                        <div class="info">${gpoObjectCount} GPOs (${gpoSettingsCount} settings), ${mdmCount} MDM</div>
                     </div>
                 `;
             }).join('');
@@ -1061,8 +1103,10 @@
         }
 
         function renderSummaryCards(device) {
-            const gpoCount = device.gpoData?.RegistryPolicies?.length || 0;
+            const gpoObjectCount = device.gpoData?.TotalGPOCount || 0;
+            const gpoSettingsCount = device.gpoData?.RegistryPolicies?.length || 0;
             const mdmCount = (device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0);
+            const sccmInstalled = device.sccmData?.IsInstalled || false;
             const analysis = device.analysis?.Summary || {};
             const matches = analysis.BothConfiguredMatch || 0;
             const conflicts = analysis.ValuesInConflict || 0;
@@ -1070,36 +1114,54 @@
             const noMapping = analysis.GPOOnlyNoMapping || 0;
 
             return `
-                <div class="summary-grid">
-                    <div class="summary-card blue">
-                        <span class="number">${gpoCount}</span>
-                        <span class="label">GPO Settings</span>
-                        <span class="description">Registry policies from Group Policy</span>
+                <div class="summary-section">
+                    <div class="summary-section-header">Policy Sources</div>
+                    <div class="summary-grid">
+                        <div class="summary-card blue">
+                            <span class="number">${gpoObjectCount}</span>
+                            <span class="label">GPOs Applied</span>
+                            <span class="description">Group Policy Objects</span>
+                        </div>
+                        <div class="summary-card blue">
+                            <span class="number">${gpoSettingsCount}</span>
+                            <span class="label">GPO Settings</span>
+                            <span class="description">Registry policies from GPO</span>
+                        </div>
+                        <div class="summary-card blue">
+                            <span class="number">${mdmCount}</span>
+                            <span class="label">MDM Settings</span>
+                            <span class="description">Policies from Intune/MDM</span>
+                        </div>
+                        <div class="summary-card ${sccmInstalled ? 'green' : 'gray'} status">
+                            <span class="number">${sccmInstalled ? 'Installed' : 'Not Installed'}</span>
+                            <span class="label">SCCM Status</span>
+                            <span class="description">${sccmInstalled ? 'ConfigMgr client detected' : 'No ConfigMgr client'}</span>
+                        </div>
                     </div>
-                    <div class="summary-card blue">
-                        <span class="number">${mdmCount}</span>
-                        <span class="label">MDM Settings</span>
-                        <span class="description">Policies from Intune/MDM</span>
-                    </div>
-                    <div class="summary-card green">
-                        <span class="number">${matches}</span>
-                        <span class="label">Matches</span>
-                        <span class="description">Same setting, same value</span>
-                    </div>
-                    <div class="summary-card red">
-                        <span class="number">${conflicts}</span>
-                        <span class="label">Conflicts</span>
-                        <span class="description">Same setting, different values</span>
-                    </div>
-                    <div class="summary-card cyan">
-                        <span class="number">${migrationReady}</span>
-                        <span class="label">Migration Ready</span>
-                        <span class="description">GPO-only with Intune mapping</span>
-                    </div>
-                    <div class="summary-card magenta">
-                        <span class="number">${noMapping}</span>
-                        <span class="label">No Mapping</span>
-                        <span class="description">GPO-only, no Intune equivalent</span>
+                </div>
+                <div class="summary-section">
+                    <div class="summary-section-header">Overlap Analysis</div>
+                    <div class="summary-grid">
+                        <div class="summary-card green">
+                            <span class="number">${matches}</span>
+                            <span class="label">Matches</span>
+                            <span class="description">Same setting, same value</span>
+                        </div>
+                        <div class="summary-card red">
+                            <span class="number">${conflicts}</span>
+                            <span class="label">Conflicts</span>
+                            <span class="description">Same setting, different values</span>
+                        </div>
+                        <div class="summary-card cyan">
+                            <span class="number">${migrationReady}</span>
+                            <span class="label">Migration Ready</span>
+                            <span class="description">GPO-only with Intune mapping</span>
+                        </div>
+                        <div class="summary-card magenta">
+                            <span class="number">${noMapping}</span>
+                            <span class="label">No Mapping</span>
+                            <span class="description">GPO-only, no Intune equivalent</span>
+                        </div>
                     </div>
                 </div>
             `;
