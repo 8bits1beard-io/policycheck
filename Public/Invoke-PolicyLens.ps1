@@ -189,10 +189,16 @@ function Invoke-PolicyLens {
                 throw "Remote collection returned no data"
             }
 
-            # Report any errors from remote collection
+            # Report any errors/warnings from remote collection
             if ($remoteResult.Errors -and $remoteResult.Errors.Count -gt 0) {
                 foreach ($err in $remoteResult.Errors) {
-                    Write-PolicyLensLog "Remote collection error: $err" -Level Warning
+                    # Show RSOP warning to user, log others
+                    if ($err -match 'RSOP logging') {
+                        Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                        Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
+                        Write-Host "$err" -ForegroundColor Yellow
+                    }
+                    Write-PolicyLensLog "Remote collection: $err" -Level Warning
                 }
             }
 

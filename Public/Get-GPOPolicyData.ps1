@@ -20,6 +20,24 @@ function Get-GPOPolicyData {
     $gpresultXml = $null
     $tempXml = Join-Path $env:TEMP "PolicyLens_gpresult_$(Get-Random).xml"
 
+    # Check if RSOP logging is disabled and temporarily enable if needed
+    $rsopPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'
+    $rsopWasDisabled = $false
+    $rsopValueName = 'RSoPLogging'
+
+    try {
+        $rsopValue = Get-ItemProperty -Path $rsopPath -Name $rsopValueName -ErrorAction SilentlyContinue
+        if ($null -ne $rsopValue -and $rsopValue.$rsopValueName -eq 0) {
+            $rsopWasDisabled = $true
+            Write-Warning "RSOP logging is disabled by Group Policy. Temporarily enabling to collect GPO data..."
+            Set-ItemProperty -Path $rsopPath -Name $rsopValueName -Value 1 -ErrorAction Stop
+            Write-Verbose "RSOP logging temporarily enabled"
+        }
+    }
+    catch {
+        Write-Warning "Could not enable RSOP logging: $_. GPO enumeration may be incomplete."
+    }
+
     try {
         $proc = Start-Process -FilePath 'gpresult.exe' `
             -ArgumentList "/x `"$tempXml`" /f" `
@@ -71,6 +89,17 @@ function Get-GPOPolicyData {
         Write-Warning "This may occur on non-domain-joined devices. Registry policy scan will continue."
     }
     finally {
+        # Restore RSOP logging to disabled if we enabled it
+        if ($rsopWasDisabled) {
+            try {
+                Set-ItemProperty -Path $rsopPath -Name $rsopValueName -Value 0 -ErrorAction Stop
+                Write-Verbose "RSOP logging restored to disabled state"
+            }
+            catch {
+                Write-Warning "Could not restore RSOP logging setting: $_"
+            }
+        }
+
         if (Test-Path $tempXml -ErrorAction SilentlyContinue) {
             Remove-Item $tempXml -Force -ErrorAction SilentlyContinue
         }

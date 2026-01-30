@@ -99,6 +99,24 @@ function Get-RemoteCollectionScriptBlock {
             $userGpos = @()
             $tempXml = Join-Path $env:TEMP "PolicyLens_gpresult_$(Get-Random).xml"
 
+            # Check if RSOP logging is disabled and temporarily enable if needed
+            $rsopPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'
+            $rsopWasDisabled = $false
+            $rsopValueName = 'RSoPLogging'
+
+            try {
+                $rsopValue = Get-ItemProperty -Path $rsopPath -Name $rsopValueName -ErrorAction SilentlyContinue
+                if ($null -ne $rsopValue -and $rsopValue.$rsopValueName -eq 0) {
+                    $rsopWasDisabled = $true
+                    # Note: Warning will be captured in result errors for remote display
+                    $result.Errors += "RSOP logging was disabled by Group Policy. Temporarily enabled to collect GPO data."
+                    Set-ItemProperty -Path $rsopPath -Name $rsopValueName -Value 1 -ErrorAction Stop
+                }
+            }
+            catch {
+                $result.Errors += "Could not enable RSOP logging: $_. GPO enumeration may be incomplete."
+            }
+
             try {
                 $proc = Start-Process -FilePath 'gpresult.exe' `
                     -ArgumentList "/x `"$tempXml`" /f" `
@@ -146,6 +164,16 @@ function Get-RemoteCollectionScriptBlock {
                 # gpresult may fail on non-domain-joined devices
             }
             finally {
+                # Restore RSOP logging to disabled if we enabled it
+                if ($rsopWasDisabled) {
+                    try {
+                        Set-ItemProperty -Path $rsopPath -Name $rsopValueName -Value 0 -ErrorAction Stop
+                    }
+                    catch {
+                        $result.Errors += "Could not restore RSOP logging setting: $_"
+                    }
+                }
+
                 if (Test-Path $tempXml -ErrorAction SilentlyContinue) {
                     Remove-Item $tempXml -Force -ErrorAction SilentlyContinue
                 }
