@@ -192,8 +192,8 @@ function Invoke-PolicyLens {
             # Report any errors/warnings from remote collection
             if ($remoteResult.Errors -and $remoteResult.Errors.Count -gt 0) {
                 foreach ($err in $remoteResult.Errors) {
-                    # Show RSOP warning to user, log others
-                    if ($err -match 'RSOP logging') {
+                    # Show RSOP/gpupdate warnings to user, log all
+                    if ($err -match 'RSOP logging|gpupdate') {
                         Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
                         Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
                         Write-Host "$err" -ForegroundColor Yellow

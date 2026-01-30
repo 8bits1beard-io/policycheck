@@ -111,6 +111,14 @@ function Get-RemoteCollectionScriptBlock {
                     # Note: Warning will be captured in result errors for remote display
                     $result.Errors += "RSOP logging was disabled by Group Policy. Temporarily enabled to collect GPO data."
                     Set-ItemProperty -Path $rsopPath -Name $rsopValueName -Value 1 -ErrorAction Stop
+
+                    # Run gpupdate to populate RSOP cache
+                    $result.Errors += "Running gpupdate /force to populate RSOP cache..."
+                    $gpupdateProc = Start-Process -FilePath 'gpupdate.exe' -ArgumentList '/force' `
+                        -NoNewWindow -Wait -PassThru -ErrorAction SilentlyContinue
+                    if ($gpupdateProc.ExitCode -ne 0) {
+                        $result.Errors += "gpupdate exited with code $($gpupdateProc.ExitCode)"
+                    }
                 }
             }
             catch {

@@ -32,6 +32,14 @@ function Get-GPOPolicyData {
             Write-Warning "RSOP logging is disabled by Group Policy. Temporarily enabling to collect GPO data..."
             Set-ItemProperty -Path $rsopPath -Name $rsopValueName -Value 1 -ErrorAction Stop
             Write-Verbose "RSOP logging temporarily enabled"
+
+            # Run gpupdate to populate RSOP cache
+            Write-Warning "Running gpupdate /force to populate RSOP cache..."
+            $gpupdateProc = Start-Process -FilePath 'gpupdate.exe' -ArgumentList '/force' `
+                -NoNewWindow -Wait -PassThru -ErrorAction SilentlyContinue
+            if ($gpupdateProc.ExitCode -ne 0) {
+                Write-Warning "gpupdate exited with code $($gpupdateProc.ExitCode)"
+            }
         }
     }
     catch {
