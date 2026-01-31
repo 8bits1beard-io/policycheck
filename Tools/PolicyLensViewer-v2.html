@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolicyLens Viewer</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #25253d;
+            --bg-card: #2d2d4a;
+            --bg-hover: #363658;
+            --text-primary: #e8e8f0;
+            --text-secondary: #9898b8;
+            --text-muted: #6868a0;
+            --accent-blue: #5b9bd5;
+            --accent-green: #6bc96b;
+            --accent-yellow: #e5c07b;
+            --accent-red: #e06c75;
+            --accent-cyan: #56b6c2;
+            --accent-magenta: #c678dd;
+            --accent-orange: #d19a66;
+            --border-color: #3a3a5c;
+            --shadow: rgba(0,0,0,0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        /* Top Navigation */
+        .top-nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            height: 56px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+            height: 100%;
+        }
+
+        .nav-tab {
+            padding: 0 20px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-tab:hover { color: var(--text-primary); background: var(--bg-hover); }
+        .nav-tab.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+        .nav-tab:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .nav-spacer { flex: 1; }
+
+        .device-count {
+            background: var(--bg-card);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Views */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* Upload View */
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 48px;
+            text-align: center;
+            background: var(--bg-secondary);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--accent-blue);
+            background: rgba(91, 155, 213, 0.1);
+        }
+
+        .drop-zone h2 { color: var(--text-primary); margin-bottom: 8px; }
+        .drop-zone p { color: var(--text-secondary); margin-bottom: 16px; }
+
+        .btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { filter: brightness(1.1); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+        /* Device Cards */
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .device-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .device-card:hover { border-color: var(--accent-blue); transform: translateY(-2px); }
+        .device-card.selected { border-color: var(--accent-green); background: rgba(107, 201, 107, 0.1); }
+
+        .device-card .name { font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
+        .device-card .meta { font-size: 0.8rem; color: var(--text-secondary); }
+        .device-card .stats { display: flex; gap: 12px; margin-top: 8px; font-size: 0.75rem; }
+        .device-card .stat { color: var(--text-muted); }
+        .device-card .stat span { color: var(--text-primary); font-weight: 600; }
+
+        .device-card .remove {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--bg-hover);
+            color: var(--accent-red);
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .device-card:hover .remove { opacity: 1; }
+
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Single View - Source Pills */
+        .source-pills {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .source-pill {
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .source-pill:hover { border-color: var(--accent-blue); }
+        .source-pill.active { background: var(--accent-blue); border-color: var(--accent-blue); color: white; }
+        .source-pill .count { font-weight: 700; }
+
+        /* Device Header */
+        .device-header {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .device-header h1 { font-size: 1.5rem; margin-bottom: 4px; }
+        .device-header .meta { color: var(--text-secondary); font-size: 0.9rem; }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-green { background: rgba(107, 201, 107, 0.2); color: var(--accent-green); }
+        .badge-yellow { background: rgba(229, 192, 123, 0.2); color: var(--accent-yellow); }
+        .badge-red { background: rgba(224, 108, 117, 0.2); color: var(--accent-red); }
+        .badge-blue { background: rgba(91, 155, 213, 0.2); color: var(--accent-blue); }
+
+        /* Source Panel */
+        .source-panel { display: none; }
+        .source-panel.active { display: block; }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .summary-card .number {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .summary-card .label { font-size: 0.8rem; color: var(--text-secondary); }
+        .summary-card.green .number { color: var(--accent-green); }
+        .summary-card.red .number { color: var(--accent-red); }
+        .summary-card.blue .number { color: var(--accent-blue); }
+        .summary-card.cyan .number { color: var(--accent-cyan); }
+        .summary-card.yellow .number { color: var(--accent-yellow); }
+        .summary-card.magenta .number { color: var(--accent-magenta); }
+
+        /* Tables */
+        .table-container {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-header h3 { font-size: 1rem; }
+
+        .search-input {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            width: 250px;
+        }
+
+        .search-input:focus { outline: none; border-color: var(--accent-blue); }
+
+        .table-wrapper {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--bg-card);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+        }
+
+        td { font-size: 0.9rem; }
+        tr:hover td { background: var(--bg-hover); }
+
+        /* Status indicators */
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-applied { background: rgba(107, 201, 107, 0.2); color: var(--accent-green); }
+        .status-missing { background: rgba(224, 108, 117, 0.2); color: var(--accent-red); }
+        .status-differs { background: rgba(229, 192, 123, 0.2); color: var(--accent-yellow); }
+
+        /* Comparison View */
+        .compare-header {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .compare-device-card {
+            flex: 1;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .compare-device-card h3 { font-size: 1.1rem; margin-bottom: 4px; }
+        .compare-device-card .meta { font-size: 0.8rem; color: var(--text-secondary); }
+
+        .compare-section {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .compare-section-header {
+            padding: 16px;
+            background: var(--bg-card);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .compare-section-header h3 { font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+        .compare-section-header .diff-count { font-size: 0.8rem; color: var(--accent-yellow); }
+
+        .compare-section-body { padding: 16px; }
+
+        .compare-table th:first-child { width: 40%; }
+        .compare-table td { text-align: center; }
+        .compare-table td:first-child { text-align: left; }
+
+        .cell-applied { color: var(--accent-green); }
+        .cell-missing { color: var(--text-muted); }
+        .cell-value { font-family: monospace; font-size: 0.85rem; }
+
+        .row-differs { background: rgba(229, 192, 123, 0.08); }
+        .row-identical { opacity: 0.6; }
+
+        .toggle-identical {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Empty states */
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state h3 { color: var(--text-primary); margin-bottom: 8px; }
+
+        /* Chips */
+        .chip {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            font-size: 0.8rem;
+            margin: 2px;
+        }
+
+        .chip.dynamic { border-color: var(--accent-cyan); }
+    </style>
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="logo">📋 PolicyLens</div>
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showView('upload')" id="tab-upload">Upload</button>
+            <button class="nav-tab" onclick="showView('single')" id="tab-single" disabled>Single View</button>
+            <button class="nav-tab" onclick="showView('compare')" id="tab-compare" disabled>Compare</button>
+        </div>
+        <div class="nav-spacer"></div>
+        <div class="device-count" id="device-count">0 devices loaded</div>
+    </nav>
+
+    <main class="main-content">
+        <!-- Upload View -->
+        <div id="view-upload" class="view active">
+            <input type="file" id="file-input" accept=".json" multiple hidden>
+            <div class="drop-zone" id="drop-zone">
+                <h2>Drop PolicyLens JSON Files</h2>
+                <p>Drag files here or click to browse</p>
+                <button class="btn" onclick="document.getElementById('file-input').click()">Browse Files</button>
+            </div>
+
+            <div class="device-grid" id="device-grid"></div>
+
+            <div class="action-bar" id="action-bar" style="display: none;">
+                <button class="btn" onclick="viewSingleDevice()" id="btn-single" disabled>View Selected Device</button>
+                <button class="btn btn-secondary" onclick="compareDevices()" id="btn-compare" disabled>Compare Selected (0)</button>
+            </div>
+        </div>
+
+        <!-- Single Device View -->
+        <div id="view-single" class="view">
+            <div id="single-content"></div>
+        </div>
+
+        <!-- Comparison View -->
+        <div id="view-compare" class="view">
+            <div id="compare-content"></div>
+        </div>
+    </main>
+
+    <script>
+        // State
+        const State = {
+            devices: [],
+            selected: [],
+            currentDevice: null,
+            activeSource: 'gpo',
+            hideIdentical: true
+        };
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            initDropZone();
+            document.getElementById('file-input').addEventListener('change', handleFiles);
+        });
+
+        function initDropZone() {
+            const dz = document.getElementById('drop-zone');
+            dz.addEventListener('click', () => document.getElementById('file-input').click());
+            dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+            dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+            dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); processFiles(e.dataTransfer.files); });
+        }
+
+        function handleFiles(e) { processFiles(e.target.files); e.target.value = ''; }
+
+        function processFiles(files) {
+            Array.from(files).forEach(file => {
+                if (file.name.endsWith('.json')) {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if (data.schemaVersion === '1.0') {
+                                const exists = State.devices.some(d => 
+                                    d.device?.computerName === data.device?.computerName && 
+                                    d.exportedAt === data.exportedAt
+                                );
+                                if (!exists) {
+                                    State.devices.push(data);
+                                    renderDeviceGrid();
+                                }
+                            }
+                        } catch (err) { console.error(err); }
+                    };
+                    reader.readAsText(file);
+                }
+            });
+        }
+
+        function renderDeviceGrid() {
+            const grid = document.getElementById('device-grid');
+            const actionBar = document.getElementById('action-bar');
+            
+            document.getElementById('device-count').textContent = `${State.devices.length} device${State.devices.length !== 1 ? 's' : ''} loaded`;
+            
+            if (State.devices.length === 0) {
+                grid.innerHTML = '';
+                actionBar.style.display = 'none';
+                return;
+            }
+            
+            actionBar.style.display = 'flex';
+            
+            grid.innerHTML = State.devices.map((d, i) => {
+                const name = d.device?.computerName || 'Unknown';
+                const date = d.exportedAt ? new Date(d.exportedAt).toLocaleDateString() : '';
+                const gpoCount = d.gpoData?.RegistryPolicies?.length || 0;
+                const mdmCount = (d.mdmData?.DevicePolicies?.length || 0) + (d.mdmData?.UserPolicies?.length || 0);
+                const isSelected = State.selected.includes(i);
+                
+                return `
+                    <div class="device-card ${isSelected ? 'selected' : ''}" onclick="toggleSelect(${i})">
+                        <button class="remove" onclick="removeDevice(${i}, event)">&times;</button>
+                        <div class="name">${esc(name)}</div>
+                        <div class="meta">${esc(date)}</div>
+                        <div class="stats">
+                            <div class="stat">GPO: <span>${gpoCount}</span></div>
+                            <div class="stat">MDM: <span>${mdmCount}</span></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            updateButtons();
+        }
+
+        function toggleSelect(index) {
+            const idx = State.selected.indexOf(index);
+            if (idx > -1) State.selected.splice(idx, 1);
+            else if (State.selected.length < 3) State.selected.push(index);
+            renderDeviceGrid();
+        }
+
+        function removeDevice(index, e) {
+            e.stopPropagation();
+            State.devices.splice(index, 1);
+            State.selected = State.selected.filter(i => i !== index).map(i => i > index ? i - 1 : i);
+            renderDeviceGrid();
+        }
+
+        function updateButtons() {
+            document.getElementById('btn-single').disabled = State.selected.length !== 1;
+            document.getElementById('btn-compare').disabled = State.selected.length < 2;
+            document.getElementById('btn-compare').textContent = `Compare Selected (${State.selected.length})`;
+            document.getElementById('tab-single').disabled = State.devices.length === 0;
+            document.getElementById('tab-compare').disabled = State.devices.length < 2;
+        }
+
+        function showView(view) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`view-${view}`).classList.add('active');
+            document.getElementById(`tab-${view}`).classList.add('active');
+        }
+
+        function viewSingleDevice() {
+            if (State.selected.length === 1) {
+                State.currentDevice = State.devices[State.selected[0]];
+                renderSingleView();
+                showView('single');
+            }
+        }
+
+        function compareDevices() {
+            if (State.selected.length >= 2) {
+                renderCompareView();
+                showView('compare');
+            }
+        }
+
+        // Single View
+        function renderSingleView() {
+            const d = State.currentDevice;
+            const name = d.device?.computerName || 'Unknown';
+            const enrolled = d.mdmData?.IsEnrolled;
+            const gpoCount = d.gpoData?.RegistryPolicies?.length || 0;
+            const mdmCount = (d.mdmData?.DevicePolicies?.length || 0) + (d.mdmData?.UserPolicies?.length || 0);
+            const sccmApps = d.sccmData?.Applications?.length || 0;
+            const groups = d.graphData?.GroupMemberships?.length || 0;
+            
+            document.getElementById('single-content').innerHTML = `
+                <div class="device-header">
+                    <div>
+                        <h1>${esc(name)}</h1>
+                        <div class="meta">
+                            ${d.device?.osVersion || ''} &bull; 
+                            Exported ${d.exportedAt ? new Date(d.exportedAt).toLocaleString() : 'Unknown'}
+                        </div>
+                    </div>
+                    <span class="badge ${enrolled ? 'badge-green' : 'badge-yellow'}">${enrolled ? 'MDM Enrolled' : 'Not Enrolled'}</span>
+                </div>
+                
+                <div class="source-pills">
+                    <button class="source-pill ${State.activeSource === 'gpo' ? 'active' : ''}" onclick="switchSource('gpo')">
+                        GPO <span class="count">${gpoCount}</span>
+                    </button>
+                    <button class="source-pill ${State.activeSource === 'mdm' ? 'active' : ''}" onclick="switchSource('mdm')">
+                        Intune/MDM <span class="count">${mdmCount}</span>
+                    </button>
+                    <button class="source-pill ${State.activeSource === 'sccm' ? 'active' : ''}" onclick="switchSource('sccm')">
+                        SCCM <span class="count">${sccmApps}</span>
+                    </button>
+                    <button class="source-pill ${State.activeSource === 'groups' ? 'active' : ''}" onclick="switchSource('groups')">
+                        Azure AD <span class="count">${groups}</span>
+                    </button>
+                </div>
+                
+                <div class="source-panel ${State.activeSource === 'gpo' ? 'active' : ''}" id="panel-gpo">
+                    ${renderGPOPanel(d)}
+                </div>
+                <div class="source-panel ${State.activeSource === 'mdm' ? 'active' : ''}" id="panel-mdm">
+                    ${renderMDMPanel(d)}
+                </div>
+                <div class="source-panel ${State.activeSource === 'sccm' ? 'active' : ''}" id="panel-sccm">
+                    ${renderSCCMPanel(d)}
+                </div>
+                <div class="source-panel ${State.activeSource === 'groups' ? 'active' : ''}" id="panel-groups">
+                    ${renderGroupsPanel(d)}
+                </div>
+            `;
+        }
+
+        function switchSource(source) {
+            State.activeSource = source;
+            document.querySelectorAll('.source-pill').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.source-panel').forEach(p => p.classList.remove('active'));
+            document.querySelector(`.source-pill:nth-child(${['gpo','mdm','sccm','groups'].indexOf(source) + 1})`).classList.add('active');
+            document.getElementById(`panel-${source}`).classList.add('active');
+        }
+
+        function renderGPOPanel(d) {
+            const policies = d.gpoData?.RegistryPolicies || [];
+            const gpos = d.gpoData?.AppliedGPOs || [];
+            
+            if (policies.length === 0) {
+                return '<div class="empty-state"><h3>No GPO Settings</h3><p>No registry-based GPO policies found on this device.</p></div>';
+            }
+            
+            return `
+                <div class="summary-grid">
+                    <div class="summary-card blue"><span class="number">${d.gpoData?.TotalGPOCount || 0}</span><span class="label">GPOs Applied</span></div>
+                    <div class="summary-card blue"><span class="number">${policies.length}</span><span class="label">Registry Settings</span></div>
+                </div>
+                
+                ${gpos.length > 0 ? `
+                    <div class="table-container" style="margin-bottom: 16px;">
+                        <div class="table-header"><h3>Applied GPOs</h3></div>
+                        <div class="table-wrapper" style="max-height: 200px;">
+                            <table>
+                                <thead><tr><th>Name</th><th>Link</th></tr></thead>
+                                <tbody>${gpos.map(g => `<tr><td>${esc(g.Name || '')}</td><td>${esc(g.Link || '')}</td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Registry Settings (${policies.length})</h3>
+                        <input type="text" class="search-input" placeholder="Search..." oninput="filterTable(this, 'gpo-table')">
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="gpo-table">
+                            <thead><tr><th>Path</th><th>Value</th><th>Data</th></tr></thead>
+                            <tbody>${policies.map(p => `
+                                <tr>
+                                    <td style="font-size: 0.8rem; word-break: break-all;">${esc(p.Path || '')}</td>
+                                    <td>${esc(p.ValueName || '')}</td>
+                                    <td>${esc(formatVal(p.Data))}</td>
+                                </tr>
+                            `).join('')}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMDMPanel(d) {
+            const mdm = d.mdmData || {};
+            const policies = [...(mdm.DevicePolicies || []), ...(mdm.UserPolicies || [])];
+            const profiles = d.graphData?.AssignedProfiles || [];
+            const apps = d.graphData?.AssignedApps || [];
+            
+            return `
+                <div class="summary-grid">
+                    <div class="summary-card ${mdm.IsEnrolled ? 'green' : 'yellow'}">
+                        <span class="number">${mdm.IsEnrolled ? '✓' : '✗'}</span>
+                        <span class="label">${mdm.IsEnrolled ? 'Enrolled' : 'Not Enrolled'}</span>
+                    </div>
+                    <div class="summary-card blue"><span class="number">${policies.length}</span><span class="label">MDM Settings</span></div>
+                    <div class="summary-card cyan"><span class="number">${profiles.length}</span><span class="label">Profiles</span></div>
+                    <div class="summary-card magenta"><span class="number">${apps.length}</span><span class="label">Apps</span></div>
+                </div>
+                
+                ${profiles.length > 0 ? `
+                    <div class="table-container" style="margin-bottom: 16px;">
+                        <div class="table-header"><h3>Assigned Profiles</h3></div>
+                        <div class="table-wrapper" style="max-height: 250px;">
+                            <table>
+                                <thead><tr><th>Name</th><th>Type</th></tr></thead>
+                                <tbody>${profiles.map(p => `<tr><td>${esc(p.displayName || '')}</td><td>${esc(p['@odata.type']?.split('.').pop() || '')}</td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${apps.length > 0 ? `
+                    <div class="table-container" style="margin-bottom: 16px;">
+                        <div class="table-header"><h3>Assigned Apps</h3></div>
+                        <div class="table-wrapper" style="max-height: 250px;">
+                            <table>
+                                <thead><tr><th>Name</th><th>Type</th><th>Intent</th></tr></thead>
+                                <tbody>${apps.map(a => `
+                                    <tr>
+                                        <td>${esc(a.displayName || '')}</td>
+                                        <td>${esc(a['@odata.type']?.split('.').pop() || '')}</td>
+                                        <td><span class="badge ${a.intent === 'required' ? 'badge-blue' : 'badge-green'}">${esc(a.intent || '')}</span></td>
+                                    </tr>
+                                `).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${policies.length > 0 ? `
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>MDM Policy Settings (${policies.length})</h3>
+                            <input type="text" class="search-input" placeholder="Search..." oninput="filterTable(this, 'mdm-table')">
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="mdm-table">
+                                <thead><tr><th>Area</th><th>Setting</th><th>Value</th></tr></thead>
+                                <tbody>${policies.map(p => `
+                                    <tr>
+                                        <td>${esc(p.Area || '')}</td>
+                                        <td>${esc(p.Setting || '')}</td>
+                                        <td>${esc(formatVal(p.Value))}</td>
+                                    </tr>
+                                `).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                ` : '<div class="empty-state"><h3>No MDM Policies</h3><p>No MDM policy settings found.</p></div>'}
+            `;
+        }
+
+        function renderSCCMPanel(d) {
+            const sccm = d.sccmData || {};
+            if (!sccm.IsInstalled) {
+                return '<div class="empty-state"><h3>SCCM Not Installed</h3><p>ConfigMgr client not detected on this device.</p></div>';
+            }
+            
+            const apps = sccm.Applications || [];
+            const baselines = sccm.Baselines || [];
+            
+            return `
+                <div class="summary-grid">
+                    <div class="summary-card green"><span class="number">✓</span><span class="label">SCCM Installed</span></div>
+                    <div class="summary-card blue"><span class="number">${apps.length}</span><span class="label">Applications</span></div>
+                    <div class="summary-card cyan"><span class="number">${baselines.length}</span><span class="label">Baselines</span></div>
+                </div>
+                
+                ${apps.length > 0 ? `
+                    <div class="table-container" style="margin-bottom: 16px;">
+                        <div class="table-header"><h3>SCCM Applications</h3></div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead><tr><th>Name</th><th>Publisher</th><th>Version</th><th>State</th></tr></thead>
+                                <tbody>${apps.map(a => `
+                                    <tr>
+                                        <td>${esc(a.Name || '')}</td>
+                                        <td>${esc(a.Publisher || '')}</td>
+                                        <td>${esc(a.Version || '')}</td>
+                                        <td><span class="badge ${a.InstallState === 'Installed' ? 'badge-green' : 'badge-yellow'}">${esc(a.InstallState || '')}</span></td>
+                                    </tr>
+                                `).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${baselines.length > 0 ? `
+                    <div class="table-container">
+                        <div class="table-header"><h3>Compliance Baselines</h3></div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead><tr><th>Name</th><th>State</th><th>Last Evaluated</th></tr></thead>
+                                <tbody>${baselines.map(b => `
+                                    <tr>
+                                        <td>${esc(b.Name || '')}</td>
+                                        <td><span class="badge ${b.ComplianceState === 'Compliant' ? 'badge-green' : 'badge-red'}">${esc(b.ComplianceState || '')}</span></td>
+                                        <td>${esc(b.LastEvaluated || '')}</td>
+                                    </tr>
+                                `).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function renderGroupsPanel(d) {
+            const groups = d.graphData?.GroupMemberships || [];
+            if (groups.length === 0) {
+                return '<div class="empty-state"><h3>No Group Data</h3><p>Azure AD group membership data not available.</p></div>';
+            }
+            
+            return `
+                <div class="summary-grid">
+                    <div class="summary-card blue"><span class="number">${groups.length}</span><span class="label">Azure AD Groups</span></div>
+                </div>
+                
+                <div style="padding: 16px;">
+                    ${groups.map(g => `<span class="chip ${g.membershipType === 'Dynamic' ? 'dynamic' : ''}">${esc(g.displayName || g.name || '')}</span>`).join('')}
+                </div>
+            `;
+        }
+
+        // Comparison View
+        function renderCompareView() {
+            const devices = State.selected.map(i => State.devices[i]);
+            
+            const header = devices.map(d => `
+                <div class="compare-device-card">
+                    <h3>${esc(d.device?.computerName || 'Unknown')}</h3>
+                    <div class="meta">${d.device?.osVersion || ''}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('compare-content').innerHTML = `
+                <div class="compare-header">${header}</div>
+                
+                <label class="toggle-identical" style="margin-bottom: 16px; cursor: pointer;">
+                    <input type="checkbox" ${State.hideIdentical ? 'checked' : ''} onchange="toggleIdentical(this.checked)">
+                    Hide identical rows
+                </label>
+                
+                ${renderCompareSection('GPO Settings', compareGPO(devices), devices)}
+                ${renderCompareSection('MDM Settings', compareMDM(devices), devices)}
+                ${renderCompareSection('Intune Profiles', compareProfiles(devices), devices)}
+                ${renderCompareSection('Azure AD Groups', compareGroups(devices), devices)}
+            `;
+        }
+
+        function toggleIdentical(hide) {
+            State.hideIdentical = hide;
+            renderCompareView();
+        }
+
+        function compareGPO(devices) {
+            const allKeys = new Set();
+            const maps = devices.map(d => {
+                const map = new Map();
+                (d.gpoData?.RegistryPolicies || []).forEach(p => {
+                    const key = `${p.Path}|${p.ValueName}`;
+                    map.set(key, p.Data);
+                    allKeys.add(key);
+                });
+                return map;
+            });
+            
+            return Array.from(allKeys).map(key => {
+                const [path, valueName] = key.split('|');
+                const values = maps.map(m => m.has(key) ? m.get(key) : null);
+                const allSame = values.every(v => v === values[0]);
+                return { key: `${path} → ${valueName}`, values, identical: allSame };
+            }).sort((a, b) => a.identical - b.identical);
+        }
+
+        function compareMDM(devices) {
+            const allKeys = new Set();
+            const maps = devices.map(d => {
+                const map = new Map();
+                [...(d.mdmData?.DevicePolicies || []), ...(d.mdmData?.UserPolicies || [])].forEach(p => {
+                    const key = `${p.Area}|${p.Setting}`;
+                    map.set(key, p.Value);
+                    allKeys.add(key);
+                });
+                return map;
+            });
+            
+            return Array.from(allKeys).map(key => {
+                const [area, setting] = key.split('|');
+                const values = maps.map(m => m.has(key) ? m.get(key) : null);
+                const allSame = values.every(v => v === values[0]);
+                return { key: `${area} → ${setting}`, values, identical: allSame };
+            }).sort((a, b) => a.identical - b.identical);
+        }
+
+        function compareProfiles(devices) {
+            const allKeys = new Set();
+            const maps = devices.map(d => {
+                const map = new Map();
+                (d.graphData?.AssignedProfiles || []).forEach(p => {
+                    map.set(p.displayName, true);
+                    allKeys.add(p.displayName);
+                });
+                return map;
+            });
+            
+            return Array.from(allKeys).map(key => {
+                const values = maps.map(m => m.has(key) ? '✓' : null);
+                const allSame = values.every(v => v === values[0]);
+                return { key, values, identical: allSame };
+            }).sort((a, b) => a.identical - b.identical);
+        }
+
+        function compareGroups(devices) {
+            const allKeys = new Set();
+            const maps = devices.map(d => {
+                const map = new Map();
+                (d.graphData?.GroupMemberships || []).forEach(g => {
+                    const name = g.displayName || g.name;
+                    map.set(name, true);
+                    allKeys.add(name);
+                });
+                return map;
+            });
+            
+            return Array.from(allKeys).map(key => {
+                const values = maps.map(m => m.has(key) ? '✓' : null);
+                const allSame = values.every(v => v === values[0]);
+                return { key, values, identical: allSame };
+            }).sort((a, b) => a.identical - b.identical);
+        }
+
+        function renderCompareSection(title, rows, devices) {
+            const diffCount = rows.filter(r => !r.identical).length;
+            const filtered = State.hideIdentical ? rows.filter(r => !r.identical) : rows;
+            
+            if (rows.length === 0) {
+                return `
+                    <div class="compare-section">
+                        <div class="compare-section-header"><h3>${title}</h3></div>
+                        <div class="compare-section-body"><p style="color: var(--text-secondary);">No data to compare.</p></div>
+                    </div>
+                `;
+            }
+            
+            const headers = devices.map(d => `<th>${esc(d.device?.computerName || 'Unknown')}</th>`).join('');
+            
+            return `
+                <div class="compare-section">
+                    <div class="compare-section-header">
+                        <h3>${title} ${diffCount > 0 ? `<span class="diff-count">(${diffCount} differences)</span>` : ''}</h3>
+                    </div>
+                    <div class="compare-section-body">
+                        <div class="table-wrapper">
+                            <table class="compare-table">
+                                <thead><tr><th>Setting</th>${headers}</tr></thead>
+                                <tbody>
+                                    ${filtered.map(row => `
+                                        <tr class="${row.identical ? 'row-identical' : 'row-differs'}">
+                                            <td>${esc(row.key)}</td>
+                                            ${row.values.map(v => `
+                                                <td class="${v === null ? 'cell-missing' : v === '✓' ? 'cell-applied' : 'cell-value'}">
+                                                    ${v === null ? '—' : esc(formatVal(v))}
+                                                </td>
+                                            `).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Utilities
+        function esc(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function formatVal(val) {
+            if (val === null || val === undefined) return '';
+            if (typeof val === 'object') return JSON.stringify(val);
+            return String(val);
+        }
+
+        function filterTable(input, tableId) {
+            const filter = input.value.toLowerCase();
+            const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>
