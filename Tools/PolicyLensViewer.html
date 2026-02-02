@@ -268,6 +268,29 @@
             color: var(--text-secondary);
         }
 
+        /* Category Dividers */
+        .category-divider {
+            display: flex;
+            align-items: center;
+            margin: 40px 0 20px 0;
+            gap: 15px;
+        }
+
+        .category-divider-line {
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+        }
+
+        .category-divider-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
         /* Collapsible Sections */
         .section {
             background: var(--bg-secondary);
@@ -1080,23 +1103,56 @@
             const container = document.getElementById('single-content');
             const name = device.device?.computerName || 'Unknown Device';
             const enrolled = device.mdmData?.IsEnrolled;
+            const domainJoined = device.device?.domainJoined ? 'Domain Joined' : 'Not Domain Joined';
+            const azureJoined = device.device?.azureADJoined ? 'Azure AD Joined' : 'Not Azure AD Joined';
 
             container.innerHTML = `
                 <div class="report-header">
                     <h1>${escapeHtml(name)}
                         ${enrolled ? '<span class="badge badge-enrolled">MDM Enrolled</span>' : '<span class="badge badge-not-enrolled">Not Enrolled</span>'}
                     </h1>
-                    <div class="subtitle">Exported: ${device.exportedAt ? formatDate(device.exportedAt) : 'Unknown'} | OS: ${escapeHtml(device.device?.osVersion || 'Unknown')}</div>
+                    <div class="subtitle">
+                        Exported: ${device.exportedAt ? formatDate(device.exportedAt) : 'Unknown'} |
+                        OS: ${escapeHtml(device.device?.osVersion || 'Unknown')} |
+                        ${domainJoined} | ${azureJoined}
+                    </div>
                 </div>
                 ${renderSummaryCards(device)}
                 ${renderCallouts(device)}
-                ${renderOverlapSection(device)}
-                ${renderProfilesSection(device)}
-                ${renderAppsSection(device)}
-                ${renderGroupsSection(device)}
+
+                <div class="category-divider">
+                    <div class="category-divider-line"></div>
+                    <div class="category-divider-text">Policies Currently Applied to This Device</div>
+                    <div class="category-divider-line"></div>
+                </div>
+                <div class="info-box explanation" style="margin-bottom: 20px;">
+                    The sections below show policies and configurations that are <strong>actively applied</strong> on this device right now.
+                </div>
                 ${renderGPOSection(device)}
                 ${renderMDMSection(device)}
                 ${renderSCCMSection(device)}
+
+                <div class="category-divider">
+                    <div class="category-divider-line"></div>
+                    <div class="category-divider-text">Policies & Apps Assigned from Intune</div>
+                    <div class="category-divider-line"></div>
+                </div>
+                <div class="info-box explanation" style="margin-bottom: 20px;">
+                    The sections below show what is <strong>assigned</strong> to this device from your Intune tenant (requires -IncludeGraph scan).
+                </div>
+                ${renderProfilesSection(device)}
+                ${renderAppsSection(device)}
+                ${renderGroupsSection(device)}
+
+                <div class="category-divider">
+                    <div class="category-divider-line"></div>
+                    <div class="category-divider-text">Analysis & Insights</div>
+                    <div class="category-divider-line"></div>
+                </div>
+                <div class="info-box explanation" style="margin-bottom: 20px;">
+                    Cross-reference analysis to identify conflicts, migration opportunities, and policy overlap between GPO and Intune.
+                </div>
+                ${renderOverlapSection(device)}
             `;
 
             initCollapsibles();
@@ -1214,12 +1270,13 @@
             return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>GPO Registry Settings (${settings.length})</h2>
+                        <h2>Group Policy (GPO) - Registry Settings (${settings.length})</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
                         <div class="info-box explanation">
-                            Registry-based policies detected from Group Policy. Review these when planning migration to Intune.
+                            <strong>What this shows:</strong> Registry-based policies currently applied from Active Directory Group Policy Objects.<br>
+                            <strong>Why it matters:</strong> These settings are managed via GPO. When migrating to Intune, you'll need to recreate equivalent policies.
                         </div>
                         <div class="filter-bar">
                             <input type="text" id="gpo-search" placeholder="Search GPO settings..." oninput="filterTable('gpo-table', 'gpo-search')">
@@ -1312,12 +1369,13 @@
             return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>MDM Settings</h2>
+                        <h2>MDM/Intune - Local Device State</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
                         <div class="info-box explanation">
-                            Policies currently applied to this device via Intune/MDM enrollment.
+                            <strong>What this shows:</strong> Policies currently enforced on this device by Intune (read from local PolicyManager registry).<br>
+                            <strong>Why it matters:</strong> This is what Intune has successfully applied to the device. Compare with "Assigned" policies below to see if everything landed.
                         </div>
                         ${enrollmentHtml}
                         ${policiesHtml}
@@ -1349,7 +1407,8 @@
 
             let clientHtml = `
                 <div class="info-box explanation">
-                    Configuration Manager client data - applications, compliance baselines, and software updates managed by SCCM.
+                    <strong>What this shows:</strong> Applications and baselines managed by Configuration Manager (SCCM).<br>
+                    <strong>Why it matters:</strong> If migrating away from SCCM, you'll need to move these apps to Intune or another deployment method.
                 </div>
                 <h3 style="margin-bottom: 10px; color: var(--text-secondary);">Client Information</h3>
                 <div class="enrollment-grid">
@@ -1490,12 +1549,13 @@
             return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>Overlap Analysis (${overlap.length})</h2>
+                        <h2>GPO vs Intune Overlap Analysis (${overlap.length} settings)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
                         <div class="info-box explanation">
-                            Compare GPO settings against Intune policies. <strong>Conflicts</strong> need resolution. <strong>Migration Ready</strong> settings can be moved to Intune.
+                            <strong>What this shows:</strong> Compares each GPO registry setting against Intune/MDM to identify overlaps and conflicts.<br>
+                            <strong>Why it matters:</strong> Find settings configured in both places (conflicts), or GPO settings ready to migrate to Intune.
                         </div>
                         <div class="legend-box">
                             <div class="legend-item">
@@ -1659,10 +1719,14 @@
             return `
                 <div class="section">
                     <div class="section-header collapsed">
-                        <h2>Intune App Assignments (${applicableApps.length} of ${allApps.length})</h2>
+                        <h2>Intune Application Assignments (${applicableApps.length} of ${allApps.length})</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
+                        <div class="info-box explanation">
+                            <strong>What this shows:</strong> Applications assigned to this device from Intune (Required or Available).<br>
+                            <strong>Why it matters:</strong> Shows what apps users should be able to install, or what apps are required on this device.
+                        </div>
                         ${infoMessage}
                         ${requiredApps.length > 0 ? `
                             <h3 style="margin: 15px 0 10px; color: var(--accent-yellow);">Required Apps (${requiredApps.length})</h3>
@@ -1759,10 +1823,14 @@
             return `
                 <div class="section">
                     <div class="section-header collapsed">
-                        <h2>Azure AD Device & Group Memberships (${groups.length} groups)</h2>
+                        <h2>Azure AD Group Memberships (${groups.length} groups)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
+                        <div class="info-box explanation">
+                            <strong>What this shows:</strong> Azure AD groups this device is a member of (Dynamic and Assigned).<br>
+                            <strong>Why it matters:</strong> Group memberships determine which Intune policies and apps are assigned to this device.
+                        </div>
                         ${deviceInfo ? `
                             <div class="enrollment-grid">
                                 <div class="enrollment-item"><div class="key">Display Name</div><div class="value">${escapeHtml(deviceInfo.DisplayName || '-')}</div></div>
@@ -1954,10 +2022,14 @@
             return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>Intune Policies Assigned to Device (${applicableCount} of ${totalCount})</h2>
+                        <h2>Intune Configuration Profiles (${applicableCount} of ${totalCount})</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
+                        <div class="info-box explanation">
+                            <strong>What this shows:</strong> Configuration profiles, compliance policies, and settings catalog items assigned to this device from Intune.<br>
+                            <strong>Why it matters:</strong> These are the <em>intended</em> policies from your Intune tenant. Compare with "MDM Local State" above to verify they applied.
+                        </div>
                         ${infoMessage}
                         ${profilesHtml}
                         ${complianceHtml}
