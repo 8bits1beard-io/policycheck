@@ -78,6 +78,13 @@ function Invoke-PolicyLens {
     $deviceMetadata = $null
     $session = $null
 
+    # Calculate total steps for progress tracking
+    $totalSteps = if ($IncludeGraph) { 5 } else { 4 }
+    if ($isRemoteScan) {
+        $totalSteps = if ($IncludeGraph) { 4 } else { 3 }
+    }
+    $currentStep = 0
+
     # --- Start logging ---
     Write-PolicyLensLog "========================================" -Level Info
     Write-PolicyLensLog "PolicyLens started (v1.0.0)" -Level Info
@@ -86,14 +93,14 @@ function Invoke-PolicyLens {
     Write-PolicyLensLog "Parameters: $logParams" -Level Info
 
     Write-Host ""
-    Write-Host "  ╔══════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "  ║  " -ForegroundColor Cyan -NoNewline
+    Write-Host "  ┌──────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "  │  " -ForegroundColor Cyan -NoNewline
     Write-Host "PolicyLens v1.0.0" -ForegroundColor White -NoNewline
-    Write-Host "                       ║" -ForegroundColor Cyan
-    Write-Host "  ║  " -ForegroundColor Cyan -NoNewline
+    Write-Host "                       │" -ForegroundColor Cyan
+    Write-Host "  │  " -ForegroundColor Cyan -NoNewline
     Write-Host "GPO • Intune • SCCM Policy Scanner" -ForegroundColor DarkCyan -NoNewline
-    Write-Host "     ║" -ForegroundColor Cyan
-    Write-Host "  ╚══════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "     │" -ForegroundColor Cyan
+    Write-Host "  └──────────────────────────────────────────┘" -ForegroundColor Cyan
     Write-Host ""
 
     # --- Check for remote scan ---
@@ -462,28 +469,25 @@ function Invoke-PolicyLens {
         $duration = [math]::Round($stopwatch.Elapsed.TotalSeconds, 1)
 
         Write-Host ""
-        Write-Host "  ╔══════════════════════════════════════════╗" -ForegroundColor Green
-        Write-Host "  ║  " -ForegroundColor Green -NoNewline
+        Write-Host "  ┌──────────────────────────────────────────┐" -ForegroundColor Green
+        Write-Host "  │  " -ForegroundColor Green -NoNewline
         Write-Host "✓ REMOTE SCAN COMPLETE" -ForegroundColor White -NoNewline
-        Write-Host "                  ║" -ForegroundColor Green
-        Write-Host "  ╠══════════════════════════════════════════╣" -ForegroundColor Green
-        Write-Host "  ║  " -ForegroundColor Green -NoNewline
+        Write-Host "                  │" -ForegroundColor Green
+        Write-Host "  ├──────────────────────────────────────────┤" -ForegroundColor Green
+        Write-Host "  │  " -ForegroundColor Green -NoNewline
         Write-Host "Target: " -ForegroundColor Gray -NoNewline
         Write-Host "$($deviceMetadata.ComputerName)" -ForegroundColor Cyan
-        Write-Host "  ║  " -ForegroundColor Green -NoNewline
-        Write-Host "JSON saved to:" -ForegroundColor Gray -NoNewline
-        Write-Host "                         ║" -ForegroundColor Green
-        Write-Host "  ║  " -ForegroundColor Green -NoNewline
+        Write-Host "  │  " -ForegroundColor Green -NoNewline
+        Write-Host "JSON saved to:" -ForegroundColor Gray
+        Write-Host "  │  " -ForegroundColor Green -NoNewline
         Write-Host "$jsonExportPath" -ForegroundColor Cyan
-        Write-Host "  ╠══════════════════════════════════════════╣" -ForegroundColor Green
-        Write-Host "  ║  " -ForegroundColor Green -NoNewline
+        Write-Host "  ├──────────────────────────────────────────┤" -ForegroundColor Green
+        Write-Host "  │  " -ForegroundColor Green -NoNewline
         Write-Host "Duration: " -ForegroundColor Gray -NoNewline
-        Write-Host "${duration}s" -ForegroundColor White -NoNewline
-        Write-Host "                             ║" -ForegroundColor Green
-        Write-Host "  ║  " -ForegroundColor Green -NoNewline
-        Write-Host "View results: Open JSON in PolicyLensViewer" -ForegroundColor Gray -NoNewline
-        Write-Host "  ║" -ForegroundColor Green
-        Write-Host "  ╚══════════════════════════════════════════╝" -ForegroundColor Green
+        Write-Host "${duration}s" -ForegroundColor White
+        Write-Host "  │  " -ForegroundColor Green -NoNewline
+        Write-Host "View results: Open JSON in PolicyLensViewer" -ForegroundColor Gray
+        Write-Host "  └──────────────────────────────────────────┘" -ForegroundColor Green
         Write-Host ""
 
         Write-PolicyLensLog "PolicyLens finished (${duration}s) - Remote scan of $($deviceMetadata.ComputerName)" -Level Info
@@ -514,25 +518,25 @@ function Invoke-PolicyLens {
     }
 
     # --- Phase 1: Collect GPO data ---
+    $currentStep++
     Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
-    Write-Host " PHASE 1 " -ForegroundColor Blue -NoNewline
-    Write-Host "─────────────────────────────────┐" -ForegroundColor DarkGray
+    Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+    Write-Host "GROUP POLICY" -ForegroundColor Blue -NoNewline
+    Write-Host " ─────────────────────┐" -ForegroundColor DarkGray
     Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
     Write-Host "► " -ForegroundColor Yellow -NoNewline
-    Write-Host "Collecting " -ForegroundColor White -NoNewline
-    Write-Host "Group Policy" -ForegroundColor Blue -NoNewline
-    Write-Host " data...          │" -ForegroundColor White
+    Write-Host "Running gpresult and scanning registry..." -ForegroundColor White
     Write-PolicyLensLog "Phase 1: GPO collection started" -Level Info
     try {
         $gpoData = Get-GPOPolicyData
         $gpoCount = $gpoData.RegistryPolicies.Count
         Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
         Write-Host "✓ " -ForegroundColor Green -NoNewline
-        Write-Host "Found " -ForegroundColor Gray -NoNewline
+        Write-Host "Collection complete: " -ForegroundColor Gray -NoNewline
         Write-Host "$($gpoData.TotalGPOCount)" -ForegroundColor Green -NoNewline
-        Write-Host " GPOs, " -ForegroundColor Gray -NoNewline
+        Write-Host " GPOs applied, " -ForegroundColor Gray -NoNewline
         Write-Host "$gpoCount" -ForegroundColor Green -NoNewline
-        Write-Host " registry policies" -ForegroundColor Gray
+        Write-Host " registry settings found" -ForegroundColor Gray
         Write-PolicyLensLog "Phase 1: GPO collection complete ($($gpoData.TotalGPOCount) GPOs, $gpoCount registry policies)" -Level Info
     }
     catch {
@@ -544,14 +548,14 @@ function Invoke-PolicyLens {
     }
 
     # --- Phase 2: Collect MDM data ---
+    $currentStep++
     Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
-    Write-Host " PHASE 2 " -ForegroundColor Magenta -NoNewline
-    Write-Host "─────────────────────────────────┤" -ForegroundColor DarkGray
+    Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+    Write-Host "MDM / INTUNE" -ForegroundColor Magenta -NoNewline
+    Write-Host " ────────────────────────┤" -ForegroundColor DarkGray
     Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
     Write-Host "► " -ForegroundColor Yellow -NoNewline
-    Write-Host "Collecting " -ForegroundColor White -NoNewline
-    Write-Host "MDM/Intune" -ForegroundColor Magenta -NoNewline
-    Write-Host " data...            │" -ForegroundColor White
+    Write-Host "Reading MDM enrollment and PolicyManager registry..." -ForegroundColor White
     Write-PolicyLensLog "Phase 2: MDM collection started" -Level Info
     try {
         $mdmData = Get-MDMPolicyData -SkipMDMDiag:$SkipMDMDiag
@@ -559,9 +563,9 @@ function Invoke-PolicyLens {
         if ($mdmData.IsEnrolled) {
             Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
             Write-Host "✓ " -ForegroundColor Green -NoNewline
-            Write-Host "Enrolled • " -ForegroundColor Green -NoNewline
+            Write-Host "Device enrolled • " -ForegroundColor Green -NoNewline
             Write-Host "$mdmTotal" -ForegroundColor Green -NoNewline
-            Write-Host " MDM policies found" -ForegroundColor Gray
+            Write-Host " MDM policies retrieved" -ForegroundColor Gray
             Write-PolicyLensLog "Phase 2: MDM collection complete (enrolled, $mdmTotal policies)" -Level Info
         }
         else {
@@ -580,14 +584,14 @@ function Invoke-PolicyLens {
     }
 
     # --- Phase 3: Collect SCCM data ---
+    $currentStep++
     Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
-    Write-Host " PHASE 3 " -ForegroundColor DarkYellow -NoNewline
-    Write-Host "─────────────────────────────────┤" -ForegroundColor DarkGray
+    Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+    Write-Host "SCCM / CONFIGMGR" -ForegroundColor DarkYellow -NoNewline
+    Write-Host " ───────────────┤" -ForegroundColor DarkGray
     Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
     Write-Host "► " -ForegroundColor Yellow -NoNewline
-    Write-Host "Collecting " -ForegroundColor White -NoNewline
-    Write-Host "SCCM/ConfigMgr" -ForegroundColor DarkYellow -NoNewline
-    Write-Host " data...        │" -ForegroundColor White
+    Write-Host "Querying SCCM client via WMI..." -ForegroundColor White
     Write-PolicyLensLog "Phase 3: SCCM collection started" -Level Info
     $sccmData = $null
     try {
@@ -597,11 +601,11 @@ function Invoke-PolicyLens {
             $baselineCount = $sccmData.Baselines.Count
             Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
             Write-Host "✓ " -ForegroundColor Green -NoNewline
-            Write-Host "Installed • " -ForegroundColor Green -NoNewline
+            Write-Host "Client installed • " -ForegroundColor Green -NoNewline
             Write-Host "$appCount" -ForegroundColor Green -NoNewline
             Write-Host " apps, " -ForegroundColor Gray -NoNewline
             Write-Host "$baselineCount" -ForegroundColor Green -NoNewline
-            Write-Host " baselines" -ForegroundColor Gray
+            Write-Host " baselines retrieved" -ForegroundColor Gray
             Write-PolicyLensLog "Phase 3: SCCM collection complete ($appCount apps, $baselineCount baselines)" -Level Info
         }
         else {
@@ -641,14 +645,14 @@ function Invoke-PolicyLens {
         }
         else {
             # Connect once
+            $currentStep++
             Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
-            Write-Host " PHASE 4 " -ForegroundColor Cyan -NoNewline
-            Write-Host "─────────────────────────────────┤" -ForegroundColor DarkGray
+            Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+            Write-Host "MICROSOFT GRAPH API" -ForegroundColor Cyan -NoNewline
+            Write-Host " ──────────────┤" -ForegroundColor DarkGray
             Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
             Write-Host "► " -ForegroundColor Yellow -NoNewline
-            Write-Host "Connecting to " -ForegroundColor White -NoNewline
-            Write-Host "Microsoft Graph" -ForegroundColor Cyan -NoNewline
-            Write-Host "...          │" -ForegroundColor White
+            Write-Host "Connecting to Microsoft Graph..." -ForegroundColor White
             try {
                 $connectParams = @{
                     Scopes = @(
@@ -743,22 +747,24 @@ function Invoke-PolicyLens {
     }
     else {
         Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
-        Write-Host " PHASE 4 " -ForegroundColor DarkGray -NoNewline
-        Write-Host "─────────────────────────────────┤" -ForegroundColor DarkGray
+        Write-Host " [Step -/$totalSteps] " -ForegroundColor DarkGray -NoNewline
+        Write-Host "MICROSOFT GRAPH API" -ForegroundColor DarkGray -NoNewline
+        Write-Host " ──────────────┤" -ForegroundColor DarkGray
         Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
         Write-Host "○ " -ForegroundColor DarkGray -NoNewline
-        Write-Host "Graph API skipped " -ForegroundColor DarkGray -NoNewline
-        Write-Host "(use -IncludeGraph)" -ForegroundColor DarkCyan
+        Write-Host "Skipped (use -IncludeGraph to enable)" -ForegroundColor DarkGray
         Write-PolicyLensLog "Phase 4: Skipped (IncludeGraph not specified)" -Level Info
     }
 
     # --- Phase 5: Analyze overlap ---
+    $currentStep++
     Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
-    Write-Host " ANALYSIS " -ForegroundColor White -NoNewline
-    Write-Host "────────────────────────────────┤" -ForegroundColor DarkGray
+    Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+    Write-Host "POLICY OVERLAP ANALYSIS" -ForegroundColor White -NoNewline
+    Write-Host " ─────────┤" -ForegroundColor DarkGray
     Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
     Write-Host "► " -ForegroundColor Yellow -NoNewline
-    Write-Host "Analyzing policy overlap..." -ForegroundColor White
+    Write-Host "Cross-referencing GPO and MDM settings..." -ForegroundColor White
     Write-PolicyLensLog "Analysis: Started" -Level Info
     try {
         $analysis = Compare-PolicyOverlap -GPOData $gpoData -MDMData $mdmData -GraphData $graphData
@@ -808,25 +814,22 @@ function Invoke-PolicyLens {
     $duration = [math]::Round($stopwatch.Elapsed.TotalSeconds, 1)
 
     Write-Host ""
-    Write-Host "  ╔══════════════════════════════════════════╗" -ForegroundColor Green
-    Write-Host "  ║  " -ForegroundColor Green -NoNewline
+    Write-Host "  ┌──────────────────────────────────────────┐" -ForegroundColor Green
+    Write-Host "  │  " -ForegroundColor Green -NoNewline
     Write-Host "✓ SCAN COMPLETE" -ForegroundColor White -NoNewline
-    Write-Host "                         ║" -ForegroundColor Green
-    Write-Host "  ╠══════════════════════════════════════════╣" -ForegroundColor Green
-    Write-Host "  ║  " -ForegroundColor Green -NoNewline
-    Write-Host "JSON saved to:" -ForegroundColor Gray -NoNewline
-    Write-Host "                         ║" -ForegroundColor Green
-    Write-Host "  ║  " -ForegroundColor Green -NoNewline
+    Write-Host "                         │" -ForegroundColor Green
+    Write-Host "  ├──────────────────────────────────────────┤" -ForegroundColor Green
+    Write-Host "  │  " -ForegroundColor Green -NoNewline
+    Write-Host "JSON saved to:" -ForegroundColor Gray
+    Write-Host "  │  " -ForegroundColor Green -NoNewline
     Write-Host "$jsonExportPath" -ForegroundColor Cyan
-    Write-Host "  ╠══════════════════════════════════════════╣" -ForegroundColor Green
-    Write-Host "  ║  " -ForegroundColor Green -NoNewline
+    Write-Host "  ├──────────────────────────────────────────┤" -ForegroundColor Green
+    Write-Host "  │  " -ForegroundColor Green -NoNewline
     Write-Host "Duration: " -ForegroundColor Gray -NoNewline
-    Write-Host "${duration}s" -ForegroundColor White -NoNewline
-    Write-Host "                             ║" -ForegroundColor Green
-    Write-Host "  ║  " -ForegroundColor Green -NoNewline
-    Write-Host "View results: Open JSON in PolicyLensViewer" -ForegroundColor Gray -NoNewline
-    Write-Host "  ║" -ForegroundColor Green
-    Write-Host "  ╚══════════════════════════════════════════╝" -ForegroundColor Green
+    Write-Host "${duration}s" -ForegroundColor White
+    Write-Host "  │  " -ForegroundColor Green -NoNewline
+    Write-Host "View results: Open JSON in PolicyLensViewer" -ForegroundColor Gray
+    Write-Host "  └──────────────────────────────────────────┘" -ForegroundColor Green
     Write-Host ""
 
     Write-PolicyLensLog "PolicyLens finished (${duration}s)" -Level Info
