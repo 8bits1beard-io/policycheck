@@ -3,630 +3,842 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PolicyLens Viewer v2</title>
+    <title>PolicyLens Viewer</title>
     <style>
-/* ============================================
-   PolicyLens Viewer v2 - Redesigned CSS
-   Modern dark theme with Single & Comparison views
-   ============================================ */
-
-:root {
-    /* Background Colors */
-    --bg-primary: #1e1e2e;
-    --bg-secondary: #252536;
-    --bg-card: #2d2d42;
-    --bg-elevated: #343450;
-    --bg-hover: #3a3a55;
-    --bg-active: #424260;
-    
-    /* Text Colors */
-    --text-primary: #e8e8f0;
-    --text-secondary: #a0a0b8;
-    --text-muted: #707088;
-    --text-inverse: #1e1e2e;
-    
-    /* Accent Colors */
-    --accent-blue: #5b9bd5;
-    --accent-blue-light: #7eb3e0;
-    --accent-blue-dark: #4a8ac4;
-    --accent-green: #6bc96b;
-    --accent-green-light: #8ad88a;
-    --accent-green-dark: #5ab85a;
-    --accent-yellow: #e5c07b;
-    --accent-yellow-light: #f0d090;
-    --accent-yellow-dark: #d4af6a;
-    --accent-red: #e06c75;
-    --accent-red-light: #eb8b92;
-    --accent-red-dark: #cf5b64;
-    --accent-cyan: #56b6c2;
-    --accent-cyan-light: #75c7d1;
-    --accent-cyan-dark: #45a5b1;
-    --accent-magenta: #c678dd;
-    --accent-magenta-light: #d499e8;
-    --accent-magenta-dark: #b567cc;
-    --accent-orange: #d19a66;
-    
-    /* Semantic Colors */
-    --status-applied: var(--accent-green);
-    --status-missing: var(--accent-red);
-    --status-different: var(--accent-yellow);
-    --status-info: var(--accent-blue);
-    
-    /* Border Colors */
-    --border-subtle: #3a3a55;
-    --border-default: #454565;
-    --border-strong: #555575;
-    
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
-    --shadow-glow-blue: 0 0 20px rgba(91, 155, 213, 0.15);
-    --shadow-glow-green: 0 0 20px rgba(107, 201, 107, 0.15);
-    
-    /* Spacing */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 48px;
-    
-    /* Border Radius */
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
-    --radius-full: 9999px;
-    
-    /* Transitions */
-    --transition-fast: 150ms ease;
-    --transition-normal: 250ms ease;
-    
-    /* Typography */
-    --font-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
-    --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-    --font-size-xs: 0.75rem;
-    --font-size-sm: 0.875rem;
-    --font-size-base: 1rem;
-    --font-size-lg: 1.125rem;
-    --font-size-xl: 1.25rem;
-    --font-size-2xl: 1.5rem;
-    --font-size-3xl: 1.875rem;
-}
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-    font-family: var(--font-sans);
-    font-size: var(--font-size-base);
-    line-height: 1.5;
-    color: var(--text-primary);
-    background-color: var(--bg-primary);
-    min-height: 100vh;
-    padding: var(--space-lg);
-    max-width: 1800px;
-    margin: 0 auto;
-}
-
-/* Navigation Bar */
-.nav-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-md) var(--space-lg);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--space-lg);
-    gap: var(--space-md);
-    flex-wrap: wrap;
-}
-
-.nav-bar h1 {
-    font-size: var(--font-size-xl);
-    font-weight: 600;
-    color: var(--accent-blue);
-    margin: 0;
-}
-
-.nav-bar h1::before { content: "🔍 "; }
-
-.nav-actions { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
-
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    border: 1px solid transparent;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    white-space: nowrap;
-}
-
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.btn-primary {
-    background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%);
-    color: var(--text-inverse);
-    border-color: var(--accent-blue-dark);
-}
-
-.btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--accent-blue-light) 0%, var(--accent-blue) 100%);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-
-.btn-secondary {
-    background: var(--bg-card);
-    color: var(--text-primary);
-    border-color: var(--border-default);
-}
-
-.btn-secondary:hover:not(:disabled) { background: var(--bg-hover); }
-.btn-secondary.active { background: var(--accent-blue); color: var(--text-inverse); }
-
-/* Summary Cards */
-.summary-section { margin-bottom: var(--space-lg); }
-
-.summary-section-header {
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-muted);
-    margin-bottom: var(--space-md);
-}
-
-.summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--space-md);
-}
-
-.summary-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: var(--space-lg);
-    text-align: center;
-    transition: all var(--transition-normal);
-}
-
-.summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-
-.summary-card .number {
-    display: block;
-    font-size: var(--font-size-3xl);
-    font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: var(--space-xs);
-}
-
-.summary-card .label { font-size: var(--font-size-sm); color: var(--text-secondary); }
-.summary-card .description { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-xs); }
-
-.summary-card.green .number { color: var(--accent-green); }
-.summary-card.red .number { color: var(--accent-red); }
-.summary-card.yellow .number { color: var(--accent-yellow); }
-.summary-card.blue .number { color: var(--accent-blue); }
-.summary-card.cyan .number { color: var(--accent-cyan); }
-.summary-card.magenta .number { color: var(--accent-magenta); }
-
-/* Status Tags */
-.status-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 10px;
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    border-radius: var(--radius-sm);
-}
-
-.status-tag.both-match, .status-tag.match { background: rgba(107, 201, 107, 0.15); color: var(--accent-green); }
-.status-tag.conflict { background: rgba(224, 108, 117, 0.15); color: var(--accent-red); }
-.status-tag.no-mapping { background: rgba(198, 120, 221, 0.15); color: var(--accent-magenta); }
-
-/* Badges */
-.badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 12px;
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    border-radius: var(--radius-full);
-}
-
-.badge-enrolled { background: var(--accent-green); color: var(--text-inverse); }
-.badge-not-enrolled { background: var(--accent-yellow); color: var(--text-inverse); }
-
-/* Tables */
-.table-wrapper { overflow-x: auto; max-height: 500px; overflow-y: auto; }
-
-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
-
-th {
-    padding: var(--space-sm) var(--space-md);
-    text-align: left;
-    font-weight: 600;
-    font-size: var(--font-size-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-secondary);
-    background: var(--bg-card);
-    border-bottom: 2px solid var(--border-default);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-td {
-    padding: var(--space-sm) var(--space-md);
-    border-bottom: 1px solid var(--border-subtle);
-    vertical-align: middle;
-}
-
-tbody tr:hover { background: var(--bg-hover); }
-
-tr.status-both-match td:first-child, tr.status-match td:first-child { border-left: 3px solid var(--accent-green); }
-tr.status-both-conflict td:first-child, tr.status-conflict td:first-child { border-left: 3px solid var(--accent-red); background: rgba(224, 108, 117, 0.05); }
-tr.status-gpo-mapping td:first-child { border-left: 3px solid var(--accent-cyan); }
-tr.status-gpo-nomapping td:first-child { border-left: 3px solid var(--accent-magenta); }
-
-.path-cell { font-size: var(--font-size-xs); font-family: var(--font-mono); color: var(--text-secondary); }
-.monospace { font-family: var(--font-mono); font-size: var(--font-size-xs); }
-
-/* Filter Bar */
-.filter-bar { display: flex; gap: var(--space-sm); margin-bottom: var(--space-md); flex-wrap: wrap; }
-
-.filter-bar input, .filter-bar select {
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--font-size-sm);
-    color: var(--text-primary);
-    background: var(--bg-card);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-}
-
-.filter-bar input { flex: 1; min-width: 200px; }
-.filter-bar input:focus, .filter-bar select:focus { outline: none; border-color: var(--accent-blue); }
-
-/* Collapsible Sections */
-.section {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--space-md);
-    overflow: hidden;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-md) var(--space-lg);
-    background: var(--bg-card);
-    cursor: pointer;
-    user-select: none;
-    transition: background var(--transition-fast);
-}
-
-.section-header:hover { background: var(--bg-hover); }
-
-.section-header h2 {
-    font-size: var(--font-size-base);
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-}
-
-.section-header .toggle {
-    font-size: 12px;
-    color: var(--text-muted);
-    transition: transform var(--transition-normal);
-}
-
-.section-header.collapsed .toggle { transform: rotate(-90deg); }
-
-.section-body { padding: var(--space-lg); }
-.section-body.hidden { display: none; }
-
-/* Source Tabs */
-.tabs, .source-tabs {
-    display: flex;
-    gap: var(--space-xs);
-    padding: var(--space-xs);
-    background: var(--bg-secondary);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-subtle);
-    margin-bottom: var(--space-lg);
-}
-
-.tab {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--text-secondary);
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.tab:hover { background: var(--bg-hover); color: var(--text-primary); }
-.tab.active { background: var(--bg-card); color: var(--text-primary); box-shadow: var(--shadow-sm); }
-
-.source-tab-content { display: none; }
-.source-tab-content.active { display: block; }
-
-/* Report Header */
-.report-header {
-    border-bottom: 2px solid var(--accent-blue);
-    padding-bottom: var(--space-md);
-    margin-bottom: var(--space-lg);
-}
-
-.report-header h1 {
-    font-size: var(--font-size-2xl);
-    color: var(--text-primary);
-    margin-bottom: var(--space-xs);
-}
-
-.report-header .subtitle { color: var(--text-secondary); font-size: var(--font-size-sm); }
-.header-separator { margin: 0 var(--space-sm); color: var(--text-muted); }
-
-/* Callouts & Info Boxes */
-.callout {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-md);
-    padding: var(--space-md);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-md);
-}
-
-.callout.warning { background: rgba(224, 108, 117, 0.1); border: 1px solid rgba(224, 108, 117, 0.3); }
-.callout.info { background: rgba(86, 182, 194, 0.1); border: 1px solid rgba(86, 182, 194, 0.3); }
-
-.callout-icon { font-size: var(--font-size-xl); }
-.callout-text { font-size: var(--font-size-sm); }
-
-.info-box {
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--font-size-sm);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-md);
-    border-left: 3px solid;
-}
-
-.info-box.info, .info-box.explanation { background: rgba(91, 155, 213, 0.08); border-color: var(--accent-blue); color: var(--text-secondary); }
-.info-box.warning { background: rgba(229, 192, 123, 0.1); border-color: var(--accent-yellow); }
-.info-box.success { background: rgba(107, 201, 107, 0.1); border-color: var(--accent-green); }
-
-/* Legend Box */
-.legend-box {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--space-md);
-    padding: var(--space-md);
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-md);
-}
-
-.legend-item { display: flex; align-items: center; gap: var(--space-sm); }
-
-.legend-color { width: 16px; height: 16px; border-radius: var(--radius-sm); flex-shrink: 0; }
-.legend-color.match { background: var(--accent-green); }
-.legend-color.conflict { background: var(--accent-red); }
-.legend-color.migration { background: var(--accent-cyan); }
-.legend-color.nomapping { background: var(--accent-magenta); }
-
-.legend-label { font-weight: 500; font-size: var(--font-size-sm); }
-.legend-desc { font-size: var(--font-size-xs); color: var(--text-muted); }
-
-/* Drop Zone */
-.drop-zone {
-    padding: var(--space-2xl);
-    text-align: center;
-    border: 2px dashed var(--border-default);
-    border-radius: var(--radius-xl);
-    background: var(--bg-secondary);
-    transition: all var(--transition-normal);
-    cursor: pointer;
-}
-
-.drop-zone:hover { border-color: var(--accent-blue); background: rgba(91, 155, 213, 0.05); }
-.drop-zone.drag-over { border-color: var(--accent-blue); background: rgba(91, 155, 213, 0.1); box-shadow: var(--shadow-glow-blue); }
-
-.drop-zone h2 { font-size: var(--font-size-xl); color: var(--text-primary); margin-bottom: var(--space-sm); }
-.drop-zone p { color: var(--text-muted); margin-bottom: var(--space-lg); }
-
-/* Device Cards */
-.device-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-md); }
-
-.device-card {
-    position: relative;
-    padding: var(--space-md);
-    background: var(--bg-card);
-    border: 2px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.device-card:hover { border-color: var(--accent-blue); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.device-card.selected { border-color: var(--accent-green); background: rgba(107, 201, 107, 0.08); box-shadow: var(--shadow-glow-green); }
-
-.device-card .name { font-weight: 600; margin-bottom: var(--space-xs); }
-.device-card .info { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: var(--space-xs); }
-
-.device-card .remove {
-    position: absolute;
-    top: var(--space-sm);
-    right: var(--space-sm);
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    color: var(--accent-red);
-    background: var(--bg-secondary);
-    border-radius: var(--radius-sm);
-    opacity: 0;
-    transition: opacity var(--transition-fast);
-}
-
-.device-card:hover .remove { opacity: 1; }
-.device-card .remove:hover { background: var(--accent-red); color: var(--text-inverse); }
-
-/* Welcome Panel */
-.welcome-panel {
-    padding: var(--space-xl);
-    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-xl);
-    margin-bottom: var(--space-lg);
-}
-
-.welcome-panel h2 { font-size: var(--font-size-xl); color: var(--accent-blue); margin-bottom: var(--space-md); }
-.welcome-panel p { color: var(--text-secondary); margin-bottom: var(--space-md); line-height: 1.7; }
-.welcome-panel ul { list-style: none; }
-.welcome-panel li { padding: var(--space-xs) 0; padding-left: var(--space-lg); position: relative; color: var(--text-primary); }
-.welcome-panel li::before { content: "→"; position: absolute; left: 0; color: var(--accent-blue); }
-
-/* Enrollment & Group Grids */
-.enrollment-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); }
-.enrollment-item .key { font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 2px; }
-.enrollment-item .value { font-size: var(--font-size-sm); word-break: break-all; }
-
-.group-list { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
-
-.group-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 12px;
-    font-size: var(--font-size-xs);
-    background: var(--bg-card);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-full);
-}
-
-.group-chip.dynamic { border-color: var(--accent-cyan); color: var(--accent-cyan); }
-.group-chip.assigned { border-color: var(--accent-blue); color: var(--accent-blue); }
-
-/* App Cards & Grids */
-.app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-md); }
-
-.app-card {
-    padding: var(--space-md);
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-}
-
-.app-card .app-name { font-weight: 600; margin-bottom: var(--space-xs); }
-.app-card .app-type { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: var(--space-sm); }
-
-.app-card .app-intent {
-    display: inline-block;
-    padding: 2px 8px;
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    border-radius: var(--radius-sm);
-}
-
-.app-card .app-intent.required { background: rgba(91, 155, 213, 0.15); color: var(--accent-blue); }
-.app-card .app-intent.available { background: rgba(107, 201, 107, 0.15); color: var(--accent-green); }
-
-/* GPO List */
-.gpo-list { display: flex; flex-direction: column; gap: var(--space-sm); }
-.gpo-item { padding: var(--space-sm) var(--space-md); background: var(--bg-card); border-radius: var(--radius-md); display: flex; align-items: center; gap: var(--space-md); }
-.gpo-name { font-weight: 500; }
-.gpo-link-order { font-size: var(--font-size-xs); color: var(--text-muted); }
-
-/* Scope Badges */
-.scope-badge { font-size: var(--font-size-xs); padding: 2px 8px; border-radius: var(--radius-sm); background: var(--bg-elevated); }
-.scope-badge.scope-machine { color: var(--accent-cyan); }
-.scope-badge.scope-user { color: var(--accent-magenta); }
-.scope-badge.scope-device { color: var(--accent-cyan); }
-
-.group-type-badge { font-size: var(--font-size-xs); padding: 2px 8px; border-radius: var(--radius-sm); }
-.group-type-badge.dynamic { background: rgba(86, 182, 194, 0.15); color: var(--accent-cyan); }
-.group-type-badge.assigned { background: rgba(91, 155, 213, 0.15); color: var(--accent-blue); }
-
-/* View Containers */
-.view { display: none; }
-.view.active { display: block; }
-
-/* Comparison View Specific */
-.comparison-row.row-different { background: rgba(229, 192, 123, 0.1); }
-.comparison-row.row-different td:first-child { border-left: 3px solid var(--accent-yellow); }
-.comparison-row.row-identical { opacity: 0.8; }
-
-.cell-applied { color: var(--accent-green); }
-.cell-not-applied { color: var(--accent-red); opacity: 0.6; }
-.cell-required { color: var(--accent-yellow); font-weight: 600; }
-.cell-available { color: var(--accent-green); }
-.cell-installed { color: var(--accent-green); }
-.cell-not-installed { color: var(--accent-red); }
-.cell-compliant { color: var(--accent-green); }
-.cell-noncompliant { color: var(--accent-red); }
-.cell-member { color: var(--accent-green); }
-.cell-not-member { color: var(--accent-red); opacity: 0.6; }
-.cell-dynamic { color: var(--accent-cyan); font-style: italic; }
-.cell-assigned { color: var(--accent-blue); }
-
-.comparison-table td { max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.comparison-table td:hover { white-space: normal; word-break: break-word; }
-
-/* Footer */
-.report-footer {
-    margin-top: var(--space-xl);
-    padding-top: var(--space-md);
-    border-top: 1px solid var(--border-subtle);
-    text-align: center;
-    font-size: var(--font-size-xs);
-    color: var(--text-muted);
-}
-
-/* Scrollbars */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--bg-secondary); }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
-/* Responsive */
-@media (max-width: 768px) {
-    body { padding: var(--space-md); }
-    .nav-bar { flex-direction: column; text-align: center; }
-    .summary-grid { grid-template-columns: repeat(2, 1fr); }
-    .filter-bar { flex-direction: column; }
-    .filter-bar input { width: 100%; }
-}
-
-/* Print */
-@media print {
-    body { background: white; color: #1a1a1a; }
-    .nav-bar, .drop-zone, .btn, .filter-bar { display: none !important; }
-    .section-body { display: block !important; }
-}
+        :root {
+            --bg-primary: #1e1e2e;
+            --bg-secondary: #2a2a3e;
+            --bg-card: #313145;
+            --text-primary: #e0e0e8;
+            --text-secondary: #a0a0b8;
+            --accent-blue: #5b9bd5;
+            --accent-green: #6bc96b;
+            --accent-yellow: #e5c07b;
+            --accent-red: #e06c75;
+            --accent-cyan: #56b6c2;
+            --accent-magenta: #c678dd;
+            --border-color: #404060;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--accent-blue);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .report-header {
+            border-bottom: 2px solid var(--accent-blue);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .report-header .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge-enrolled {
+            background-color: var(--accent-green);
+            color: #1e1e2e;
+        }
+
+        .badge-not-enrolled {
+            background-color: var(--accent-yellow);
+            color: #1e1e2e;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-card .number {
+            font-size: 2rem;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .summary-card.green .number { color: var(--accent-green); }
+        .summary-card.yellow .number { color: var(--accent-yellow); }
+        .summary-card.red .number { color: var(--accent-red); }
+        .summary-card.cyan .number { color: var(--accent-cyan); }
+        .summary-card.magenta .number { color: var(--accent-magenta); }
+        .summary-card.blue .number { color: var(--accent-blue); }
+
+        .summary-card .description {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Summary Sections - Grouped card layout */
+        .summary-section {
+            margin-bottom: 20px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-section-header {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .summary-section .summary-grid {
+            margin-bottom: 0;
+        }
+
+        .summary-card.status .number {
+            font-size: 1.2rem;
+        }
+
+        .summary-card.status .status-icon {
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .summary-card.status .status-icon.check::before {
+            content: "\2713";
+            color: var(--accent-green);
+        }
+
+        .summary-card.status .status-icon.x::before {
+            content: "\2717";
+            color: var(--accent-red);
+        }
+
+        /* Welcome Panel */
+        .welcome-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px 25px;
+            margin-bottom: 20px;
+        }
+
+        .welcome-panel h2 {
+            color: var(--accent-blue);
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .welcome-panel p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+        }
+
+        .welcome-panel ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .welcome-panel li {
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+            color: var(--text-primary);
+        }
+
+        .welcome-panel li::before {
+            content: "\2022";
+            color: var(--accent-blue);
+            position: absolute;
+            left: 0;
+        }
+
+        /* Callouts */
+        .callout {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .callout.warning {
+            background: rgba(224, 108, 117, 0.1);
+            border: 1px solid var(--accent-red);
+        }
+
+        .callout.info {
+            background: rgba(86, 182, 194, 0.1);
+            border: 1px solid var(--accent-cyan);
+        }
+
+        .callout-icon {
+            font-size: 1.3rem;
+        }
+
+        .callout-text {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        /* Legend Box */
+        .legend-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .legend-box .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+
+        .legend-color.match { background: var(--accent-green); }
+        .legend-color.conflict { background: var(--accent-red); }
+        .legend-color.migration { background: var(--accent-cyan); }
+        .legend-color.nomapping { background: var(--accent-magenta); }
+
+        .legend-label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .legend-desc {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Info box explanation variant */
+        .info-box.explanation {
+            background: rgba(91, 155, 213, 0.08);
+            border-left: 3px solid var(--accent-blue);
+            color: var(--text-secondary);
+        }
+
+        /* Collapsible Sections */
+        .section {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: var(--bg-card);
+            padding: 14px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .section-header:hover {
+            background: #3a3a50;
+        }
+
+        .section-header h2 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .section-header .toggle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            transition: transform 0.3s;
+        }
+
+        .section-header.collapsed .toggle {
+            transform: rotate(-90deg);
+        }
+
+        .section-body {
+            padding: 15px 20px;
+        }
+
+        .section-body.hidden {
+            display: none;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            background: var(--bg-card);
+            color: var(--accent-blue);
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: rgba(91, 155, 213, 0.05);
+        }
+
+        /* Status rows */
+        tr.status-both-match td {
+            border-left: 3px solid var(--accent-green);
+        }
+
+        tr.status-both-conflict td {
+            border-left: 3px solid var(--accent-red);
+            background: rgba(224, 108, 117, 0.08);
+        }
+
+        tr.status-gpo-mapping td {
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        tr.status-gpo-nomapping td {
+            border-left: 3px solid var(--accent-magenta);
+        }
+
+        tr.status-mdm-only td {
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        /* Status badges in tables */
+        .status-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-tag.both-match {
+            background: rgba(107, 201, 107, 0.2);
+            color: var(--accent-green);
+        }
+
+        .status-tag.conflict {
+            background: rgba(224, 108, 117, 0.2);
+            color: var(--accent-red);
+        }
+
+        .status-tag.migration-ready {
+            background: rgba(86, 182, 194, 0.2);
+            color: var(--accent-cyan);
+        }
+
+        .status-tag.no-mapping {
+            background: rgba(198, 120, 221, 0.2);
+            color: var(--accent-magenta);
+        }
+
+        .status-tag.mdm-only {
+            background: rgba(91, 155, 213, 0.2);
+            color: var(--accent-blue);
+        }
+
+        /* Info boxes */
+        .info-box {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+
+        .info-box.info {
+            background: rgba(91, 155, 213, 0.1);
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .info-box.warning {
+            background: rgba(229, 192, 123, 0.1);
+            border-left: 3px solid var(--accent-yellow);
+        }
+
+        .info-box.success {
+            background: rgba(107, 201, 107, 0.1);
+            border-left: 3px solid var(--accent-green);
+        }
+
+        /* Filter/Search */
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar input {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-bar input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .filter-bar select {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        /* Enrollment details */
+        .enrollment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+        }
+
+        .enrollment-item {
+            padding: 8px 0;
+        }
+
+        .enrollment-item .key {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .enrollment-item .value {
+            font-size: 1rem;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: var(--bg-card);
+            border-radius: 6px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .legend-dot.green { background: var(--accent-green); }
+        .legend-dot.red { background: var(--accent-red); }
+        .legend-dot.cyan { background: var(--accent-cyan); }
+        .legend-dot.magenta { background: var(--accent-magenta); }
+        .legend-dot.blue { background: var(--accent-blue); }
+
+        /* App assignments section */
+        .app-card {
+            background: var(--bg-card);
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .app-card .app-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .app-card .app-type {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .app-card .app-intent {
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .app-card .app-intent.required {
+            background: rgba(91, 155, 213, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .app-card .app-intent.available {
+            background: rgba(107, 201, 107, 0.2);
+            color: var(--accent-green);
+        }
+
+        /* Group memberships */
+        .group-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .group-chip {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 4px 14px;
+            font-size: 0.85rem;
+        }
+
+        .group-chip.dynamic {
+            border-color: var(--accent-cyan);
+        }
+
+        .group-chip.assigned {
+            border-color: var(--accent-blue);
+        }
+
+        /* Footer */
+        .report-footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Drop zone */
+        .drop-zone {
+            border: 3px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 60px 40px;
+            text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s;
+            background: var(--bg-secondary);
+        }
+        .drop-zone.drag-over {
+            border-color: var(--accent-blue);
+            background: rgba(91, 155, 213, 0.1);
+        }
+        .drop-zone h2 { color: var(--text-primary); margin-bottom: 10px; }
+        .drop-zone p { color: var(--text-secondary); }
+
+        /* Device cards in upload view */
+        .device-cards { display: flex; gap: 15px; flex-wrap: wrap; margin: 20px 0; }
+        .device-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px 20px;
+            min-width: 200px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .device-card:hover { border-color: var(--accent-blue); }
+        .device-card.selected { border-color: var(--accent-green); background: rgba(107, 201, 107, 0.1); }
+        .device-card .name { font-weight: 600; color: var(--text-primary); }
+        .device-card .info { font-size: 0.85rem; color: var(--text-secondary); }
+        .device-card .remove {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: var(--accent-red);
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+        .device-card .remove:hover { opacity: 0.7; }
+
+        /* Comparison grid */
+        .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .compare-column { min-width: 0; }
+        .compare-header {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* Diff highlighting */
+        .diff-unique-a { background: rgba(224, 108, 117, 0.15); }
+        .diff-unique-b { background: rgba(107, 201, 107, 0.15); }
+        .diff-value-mismatch { background: rgba(229, 192, 123, 0.15); }
+        .diff-identical { }
+
+        /* Action buttons */
+        .btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 5px;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 5px; margin-bottom: 20px; }
+        .tab {
+            padding: 10px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        .tab.active { background: var(--bg-card); color: var(--text-primary); border-bottom-color: var(--bg-card); }
+
+        /* View containers */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* Navigation */
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-bar h1 { margin-bottom: 0; }
+
+        .nav-actions { display: flex; gap: 10px; }
+
+        /* File input styling */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Table wrapper for scroll */
+        .table-wrapper {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+                color: #333;
+                padding: 10px;
+            }
+
+            .section-header { cursor: default; }
+            .section-body { display: block !important; }
+
+            .summary-card {
+                border: 1px solid #ccc;
+                background: #f9f9f9;
+            }
+
+            tr.status-both-conflict td { background: #ffe0e0; }
+            tr.status-gpo-mapping td { background: #e0f5f5; }
+            tr.status-gpo-nomapping td { background: #f0e0f5; }
+        }
+
+        /* Welcome Panel */
+        .welcome-panel {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+        }
+        .welcome-panel h2 {
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        .welcome-panel p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+        .welcome-panel ul {
+            list-style: none;
+            padding: 0;
+        }
+        .welcome-panel li {
+            color: var(--text-primary);
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .welcome-panel li::before {
+            content: "•";
+            color: var(--accent-blue);
+            position: absolute;
+            left: 0;
+        }
+
+        /* Summary Card Descriptions */
+        .summary-card .description {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+            line-height: 1.3;
+        }
+
+        /* Info Boxes - Enhanced */
+        .info-box.explanation {
+            background: rgba(91, 155, 213, 0.1);
+            border-left: 3px solid var(--accent-blue);
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Legend Box */
+        .legend-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .legend-color.match { background: var(--accent-green); }
+        .legend-color.conflict { background: var(--accent-red); }
+        .legend-color.migration { background: var(--accent-cyan); }
+        .legend-color.nomapping { background: var(--accent-magenta); }
+        .legend-label { color: var(--text-primary); font-weight: 500; }
+        .legend-desc { color: var(--text-secondary); font-size: 0.8rem; }
+
+        /* Callout Banners */
+        .callout {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .callout-icon {
+            font-size: 1.3rem;
+        }
+        .callout.warning {
+            background: rgba(224, 108, 117, 0.15);
+            border: 1px solid var(--accent-red);
+        }
+        .callout.warning .callout-icon { color: var(--accent-red); }
+        .callout.info {
+            background: rgba(86, 182, 194, 0.15);
+            border: 1px solid var(--accent-cyan);
+        }
+        .callout.info .callout-icon { color: var(--accent-cyan); }
+        .callout-text {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
     </style>
 </head>
 <body>
@@ -635,39 +847,39 @@ tr.status-gpo-nomapping td:first-child { border-left: 3px solid var(--accent-mag
         <div class="nav-actions">
             <button class="btn btn-secondary" onclick="showView('upload')" id="nav-upload">Upload Files</button>
             <button class="btn btn-secondary" onclick="showView('single')" id="nav-single" disabled>Single View</button>
-            <button class="btn btn-secondary" onclick="showView('compare')" id="nav-compare" disabled>Compare (2-3)</button>
+            <button class="btn btn-secondary" onclick="showView('compare')" id="nav-compare" disabled>Compare</button>
         </div>
     </div>
 
     <!-- Upload View -->
     <div id="view-upload" class="view active">
         <div class="welcome-panel">
-            <h2>📊 Welcome to PolicyLens Viewer v2</h2>
-            <p>Analyze Windows device policy configurations across GPO, Intune, SCCM, and Azure AD.</p>
+            <h2>Welcome to PolicyLens Viewer</h2>
+            <p>This tool helps Windows Engineers plan GPO-to-Intune migration by analyzing policy overlap on Windows devices.</p>
             <ul>
-                <li><strong>Single View:</strong> Deep-dive into one device's complete policy landscape</li>
-                <li><strong>Comparison View:</strong> Compare 2-3 devices side-by-side to find differences</li>
-                <li>See conflicts, matches, and migration opportunities at a glance</li>
+                <li>See all GPO registry policies and MDM settings on a device</li>
+                <li>Identify conflicts where GPO and Intune configure the same setting differently</li>
+                <li>Find GPO settings ready to migrate (have known Intune equivalents)</li>
+                <li>View Intune app assignments and Azure AD group memberships</li>
             </ul>
         </div>
-
-        <input type="file" id="file-input" accept=".json" multiple style="display: none;">
+        <input type="file" id="file-input" accept=".json" multiple style="position: absolute; left: -9999px;">
         <div class="drop-zone" id="drop-zone">
-            <h2>📁 Drop PolicyLens JSON Files Here</h2>
-            <p>or click to browse</p>
-            <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">Browse Files</button>
+            <h2>Drop PolicyLens JSON Files Here</h2>
+            <p>or click to select files</p>
+            <label for="file-input" class="btn" style="margin-top: 15px; display: inline-block; cursor: pointer;">Browse Files</label>
         </div>
 
-        <div style="margin-top: var(--space-lg);">
-            <h3 style="color: var(--text-secondary); margin-bottom: var(--space-md);">Loaded Devices</h3>
+        <div id="loaded-devices">
+            <h3 style="margin-bottom: 10px; color: var(--text-secondary);">Loaded Devices</h3>
             <div class="device-cards" id="device-cards">
-                <p style="color: var(--text-muted);">No devices loaded yet.</p>
+                <p style="color: var(--text-secondary);">No devices loaded. Drop JSON files above.</p>
             </div>
         </div>
 
-        <div style="margin-top: var(--space-lg); display: flex; gap: var(--space-sm); flex-wrap: wrap;">
-            <button class="btn btn-primary" onclick="viewSelectedDevice()" id="btn-view-single" disabled>View Selected Device</button>
-            <button class="btn btn-primary" onclick="compareSelectedDevices()" id="btn-compare" disabled>Compare Selected (2-3)</button>
+        <div style="margin-top: 20px;">
+            <button class="btn" onclick="viewSelectedDevice()" id="btn-view-single" disabled>View Selected Device</button>
+            <button class="btn" onclick="compareSelectedDevices()" id="btn-compare" disabled>Compare Selected Devices (2)</button>
         </div>
     </div>
 
@@ -682,1034 +894,1528 @@ tr.status-gpo-nomapping td:first-child { border-left: 3px solid var(--accent-mag
     </div>
 
     <div class="report-footer">
-        PolicyLens Viewer v2 - Multi-source policy analysis for Windows devices
+        PolicyLens Viewer - View and compare policy exports
     </div>
 
     <script>
-// ============================================================================
-// APPLICATION STATE
-// ============================================================================
-const AppState = {
-    devices: [],
-    currentView: 'upload',
-    selectedDevices: []
-};
+        // Application State
+        const AppState = {
+            devices: [],
+            currentView: 'upload',
+            selectedDevices: []
+        };
 
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
-document.addEventListener('DOMContentLoaded', () => {
-    initDropZone();
-    initFileInput();
-});
-
-function initDropZone() {
-    const dropZone = document.getElementById('drop-zone');
-    
-    dropZone.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'BUTTON') {
-            document.getElementById('file-input').click();
-        }
-    });
-
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
-    });
-
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('drag-over');
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-        processFiles(e.dataTransfer.files);
-    });
-}
-
-function initFileInput() {
-    document.getElementById('file-input').addEventListener('change', (e) => {
-        processFiles(e.target.files);
-        e.target.value = '';
-    });
-}
-
-// ============================================================================
-// FILE HANDLING
-// ============================================================================
-function processFiles(files) {
-    for (const file of files) {
-        if (file.type === 'application/json' || file.name.endsWith('.json')) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data && data.schemaVersion === "1.0") {
-                        const exists = AppState.devices.some(d =>
-                            d.device?.computerName === data.device?.computerName &&
-                            d.exportedAt === data.exportedAt
-                        );
-                        if (!exists) {
-                            AppState.devices.push(data);
-                            renderDeviceCards();
-                        } else {
-                            alert(`Device "${data.device?.computerName || 'Unknown'}" already loaded.`);
-                        }
-                    } else {
-                        alert(`Invalid schema in ${file.name}. Expected schemaVersion "1.0".`);
-                    }
-                } catch (err) {
-                    alert(`Error parsing ${file.name}: ${err.message}`);
-                }
-            };
-            reader.readAsText(file);
-        }
-    }
-}
-
-// ============================================================================
-// DEVICE CARD RENDERING
-// ============================================================================
-function renderDeviceCards() {
-    const container = document.getElementById('device-cards');
-
-    if (AppState.devices.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted);">No devices loaded yet.</p>';
-        updateNavButtons();
-        return;
-    }
-
-    container.innerHTML = AppState.devices.map((device, index) => {
-        const name = device.device?.computerName || 'Unknown Device';
-        const date = device.exportedAt ? formatDate(device.exportedAt) : 'Unknown date';
-        const gpoCount = device.gpoData?.TotalGPOCount || 0;
-        const gpoSettings = device.gpoData?.RegistryPolicies?.length || 0;
-        const mdmCount = (device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0);
-        const isSelected = AppState.selectedDevices.includes(index);
-
-        return `
-            <div class="device-card ${isSelected ? 'selected' : ''}" onclick="selectDevice(${index})">
-                <span class="remove" onclick="removeDevice(${index}, event)">&times;</span>
-                <div class="name">${escapeHtml(name)}</div>
-                <div class="info">${escapeHtml(date)}</div>
-                <div class="info">${gpoCount} GPOs (${gpoSettings} settings) | ${mdmCount} MDM policies</div>
-            </div>
-        `;
-    }).join('');
-
-    updateNavButtons();
-}
-
-function selectDevice(index) {
-    const idx = AppState.selectedDevices.indexOf(index);
-    if (idx > -1) {
-        AppState.selectedDevices.splice(idx, 1);
-    } else {
-        if (AppState.selectedDevices.length >= 3) {
-            AppState.selectedDevices.shift();
-        }
-        AppState.selectedDevices.push(index);
-    }
-    renderDeviceCards();
-}
-
-function removeDevice(index, e) {
-    e.stopPropagation();
-    AppState.devices.splice(index, 1);
-    AppState.selectedDevices = AppState.selectedDevices
-        .filter(i => i !== index)
-        .map(i => i > index ? i - 1 : i);
-    renderDeviceCards();
-}
-
-function updateNavButtons() {
-    const btnSingle = document.getElementById('btn-view-single');
-    const btnCompare = document.getElementById('btn-compare');
-    const navSingle = document.getElementById('nav-single');
-    const navCompare = document.getElementById('nav-compare');
-
-    btnSingle.disabled = AppState.selectedDevices.length !== 1;
-    btnCompare.disabled = AppState.selectedDevices.length < 2;
-    navSingle.disabled = AppState.devices.length === 0;
-    navCompare.disabled = AppState.devices.length < 2;
-}
-
-// ============================================================================
-// VIEW SWITCHING
-// ============================================================================
-function showView(viewName) {
-    AppState.currentView = viewName;
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(`view-${viewName}`).classList.add('active');
-
-    document.querySelectorAll('.nav-actions .btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`nav-${viewName}`)?.classList.add('active');
-}
-
-function viewSelectedDevice() {
-    if (AppState.selectedDevices.length === 1) {
-        const device = AppState.devices[AppState.selectedDevices[0]];
-        document.getElementById('single-content').innerHTML = renderSingleView(device);
-        initSingleView();
-        showView('single');
-    }
-}
-
-function compareSelectedDevices() {
-    if (AppState.selectedDevices.length >= 2) {
-        const devices = AppState.selectedDevices.map(i => AppState.devices[i]);
-        document.getElementById('compare-content').innerHTML = renderComparisonView(devices);
-        initCollapsibles();
-        showView('compare');
-    }
-}
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    const div = document.createElement('div');
-    div.textContent = String(str);
-    return div.innerHTML;
-}
-
-function formatDate(isoString) {
-    if (!isoString) return '';
-    try {
-        return new Date(isoString).toLocaleString();
-    } catch {
-        return isoString;
-    }
-}
-
-function formatValue(val) {
-    if (val === null || val === undefined) return '-';
-    if (typeof val === 'object') return JSON.stringify(val);
-    return String(val);
-}
-
-function initCollapsibles() {
-    document.querySelectorAll('.section-header').forEach(header => {
-        if (header.dataset.initialized) return;
-        header.dataset.initialized = 'true';
-        header.addEventListener('click', function() {
-            this.classList.toggle('collapsed');
-            const body = this.nextElementSibling;
-            if (body) body.classList.toggle('hidden');
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initDropZone();
         });
-    });
-}
 
-function filterTable(tableId, searchValue) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    const search = searchValue.toLowerCase();
-    table.querySelectorAll('tbody tr').forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(search) ? '' : 'none';
-    });
-}
+        // File handling
+        function initDropZone() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
 
-function filterTableBySearch(tableId, searchInputId) {
-    const searchValue = (document.getElementById(searchInputId)?.value || '').toLowerCase();
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    table.querySelectorAll('tbody tr').forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(searchValue) ? '' : 'none';
-    });
-}
+            // Click anywhere on drop zone (except the button) opens file picker
+            dropZone.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'LABEL') {
+                    fileInput.click();
+                }
+            });
 
-// ============================================================================
-// GROUP & POLICY HELPERS
-// ============================================================================
-function getDeviceGroupIds(groupData) {
-    if (!groupData?.Available || !groupData?.DeviceFound || !groupData?.Groups) return [];
-    return groupData.Groups.map(g => g.ObjectId).filter(id => id);
-}
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
 
-function policyAppliesToDevice(policy, deviceGroupIds) {
-    const assignments = policy.Assignments || [];
-    if (assignments.length === 0) return false;
-    
-    let isIncluded = false, isExcluded = false;
-    
-    for (const a of assignments) {
-        const targetType = (a.TargetType || '').replace('#microsoft.graph.', '');
-        const groupId = a.GroupId;
-        
-        if (targetType === 'allDevicesAssignmentTarget' || targetType === 'allLicensedUsersAssignmentTarget') {
-            isIncluded = true;
-        } else if (targetType === 'groupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
-            isIncluded = true;
-        } else if (targetType === 'exclusionGroupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
-            isExcluded = true;
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                handleFileDrop(e);
+            });
+
+            fileInput.addEventListener('change', handleFileSelect);
         }
-    }
-    
-    return isIncluded && !isExcluded;
-}
 
-function appAppliesToDevice(app, deviceGroupIds) {
-    return (app.Assignments || []).some(a => assignmentAppliesToDevice(a, deviceGroupIds));
-}
-
-function assignmentAppliesToDevice(assignment, deviceGroupIds) {
-    const targetType = assignment.TargetType || '';
-    const groupId = assignment.GroupId;
-    
-    if (targetType === 'All Devices' || targetType === 'All Users') return true;
-    if (targetType.startsWith('Group:') && groupId && deviceGroupIds.includes(groupId)) return true;
-    return false;
-}
-
-function filterApplicablePolicies(policies, deviceGroupIds) {
-    return policies.filter(p => policyAppliesToDevice(p, deviceGroupIds));
-}
-
-function getAssignmentReason(policy, deviceGroupIds, groupData) {
-    const groups = groupData?.Groups || [];
-    const assignments = policy.Assignments || [];
-    
-    for (const a of assignments) {
-        const targetType = (a.TargetType || '').replace('#microsoft.graph.', '');
-        if (targetType === 'allDevicesAssignmentTarget') return 'All Devices';
-        if (targetType === 'allLicensedUsersAssignmentTarget') return 'All Users';
-        if (targetType === 'groupAssignmentTarget' && a.GroupId && deviceGroupIds.includes(a.GroupId)) {
-            const group = groups.find(g => g.ObjectId === a.GroupId);
-            return group ? escapeHtml(group.DisplayName) : 'Group';
+        function handleFileDrop(e) {
+            const files = e.dataTransfer.files;
+            processFiles(files);
         }
-    }
-    return '-';
-}
 
-function formatProfileType(odataType) {
-    if (!odataType) return 'Unknown';
-    return odataType.replace('#microsoft.graph.', '').replace(/([A-Z])/g, ' $1').trim();
-}
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            processFiles(files);
+            e.target.value = '';
+        }
 
-function formatAssignmentTarget(targetType, groupId, groupData) {
-    if (targetType === 'All Devices') return '<span class="badge">All Devices</span>';
-    if (targetType === 'All Users') return '<span class="badge">All Users</span>';
-    const groups = groupData?.Groups || [];
-    const group = groups.find(g => g.ObjectId === groupId);
-    return group ? escapeHtml(group.DisplayName) : 'Group';
-}
+        function processFiles(files) {
+            for (const file of files) {
+                if (file.type === 'application/json' || file.name.endsWith('.json')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if (validateSchema(data)) {
+                                // Check for duplicates
+                                const exists = AppState.devices.some(d =>
+                                    d.device?.computerName === data.device?.computerName &&
+                                    d.exportedAt === data.exportedAt
+                                );
+                                if (!exists) {
+                                    AppState.devices.push(data);
+                                    renderDeviceCards();
+                                } else {
+                                    alert(`Device "${data.device?.computerName || 'Unknown'}" is already loaded.`);
+                                }
+                            } else {
+                                alert(`Invalid schema in file: ${file.name}. Expected schemaVersion "1.0".`);
+                            }
+                        } catch (err) {
+                            alert(`Error parsing ${file.name}: ${err.message}`);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            }
+        }
 
-function getProfileType(profile) {
-    if (profile.OdataType) return formatProfileType(profile.OdataType);
-    if (profile.Technologies) return 'Settings Catalog';
-    return 'Unknown';
-}
+        function validateSchema(data) {
+            return data && data.schemaVersion === "1.0";
+        }
 
-// ============================================================================
-// SINGLE VIEW RENDERING
-// ============================================================================
-function renderSingleView(deviceData) {
-    const device = deviceData.device || {};
-    const name = device.computerName || 'Unknown Device';
-    const osVersion = device.osVersion || 'Unknown OS';
-    const enrolled = deviceData.mdmData?.IsEnrolled || false;
-    const exportDate = deviceData.exportedAt ? formatDate(deviceData.exportedAt) : 'Unknown';
+        function removeDevice(index, e) {
+            e.stopPropagation();
+            AppState.devices.splice(index, 1);
+            AppState.selectedDevices = AppState.selectedDevices.filter(i => i !== index).map(i => i > index ? i - 1 : i);
+            renderDeviceCards();
+            updateNavButtons();
+        }
 
-    const enrolledBadge = enrolled 
-        ? '<span class="badge badge-enrolled">MDM Enrolled</span>'
-        : '<span class="badge badge-not-enrolled">Not Enrolled</span>';
+        function renderDeviceCards() {
+            const container = document.getElementById('device-cards');
 
-    return `
-        <div class="single-view-container">
-            <div class="report-header">
-                <h1>${escapeHtml(name)} ${enrolledBadge}</h1>
-                <div class="subtitle">
-                    <span>OS: ${escapeHtml(osVersion)}</span>
-                    <span class="header-separator">|</span>
-                    <span>Exported: ${escapeHtml(exportDate)}</span>
-                </div>
-            </div>
-            
-            <div class="source-tabs" id="source-tabs">
-                <button class="tab active" data-tab="gpo" onclick="switchSourceTab('gpo')">📋 GPO</button>
-                <button class="tab" data-tab="intune" onclick="switchSourceTab('intune')">☁️ Intune/MDM</button>
-                <button class="tab" data-tab="sccm" onclick="switchSourceTab('sccm')">🖥️ SCCM</button>
-                <button class="tab" data-tab="azuread" onclick="switchSourceTab('azuread')">🔐 Azure AD</button>
-            </div>
-            
-            <div class="tab-content-container">
-                ${renderGPOTab(deviceData)}
-                ${renderIntuneTab(deviceData)}
-                ${renderSCCMTab(deviceData)}
-                ${renderAzureADTab(deviceData)}
-            </div>
-            
-            ${renderMigrationAnalysis(deviceData)}
-        </div>
-    `;
-}
+            if (AppState.devices.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary);">No devices loaded. Drop JSON files above.</p>';
+                return;
+            }
 
-function switchSourceTab(tabId) {
-    document.querySelectorAll('#source-tabs .tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.tab === tabId);
-    });
-    document.querySelectorAll('.source-tab-content').forEach(content => {
-        content.classList.toggle('active', content.id === `tab-${tabId}`);
-    });
-}
+            container.innerHTML = AppState.devices.map((device, index) => {
+                const name = device.device?.computerName || 'Unknown Device';
+                const date = device.exportedAt ? formatDate(device.exportedAt) : 'Unknown date';
+                const gpoObjectCount = device.gpoData?.TotalGPOCount || 0;
+                const gpoSettingsCount = device.gpoData?.RegistryPolicies?.length || 0;
+                const mdmCount = (device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0);
+                const isSelected = AppState.selectedDevices.includes(index);
 
-function initSingleView() {
-    initCollapsibles();
-    switchSourceTab('gpo');
-}
-
-// GPO Tab
-function renderGPOTab(deviceData) {
-    const gpoData = deviceData.gpoData || {};
-    const totalGPOs = gpoData.TotalGPOCount || 0;
-    const registryPolicies = gpoData.RegistryPolicies || [];
-    const appliedGPOs = gpoData.AppliedGPOs || [];
-
-    return `
-        <div class="source-tab-content active" id="tab-gpo">
-            <div class="summary-grid" style="margin-bottom: var(--space-lg);">
-                <div class="summary-card blue">
-                    <span class="number">${totalGPOs}</span>
-                    <span class="label">GPOs Applied</span>
-                </div>
-                <div class="summary-card cyan">
-                    <span class="number">${registryPolicies.length}</span>
-                    <span class="label">Registry Settings</span>
-                </div>
-            </div>
-            
-            ${appliedGPOs.length > 0 ? `
-                <div class="section">
-                    <div class="section-header">
-                        <h2>Applied GPOs (${appliedGPOs.length})</h2>
-                        <span class="toggle">▼</span>
+                return `
+                    <div class="device-card ${isSelected ? 'selected' : ''}" onclick="selectDevice(${index})">
+                        <span class="remove" onclick="removeDevice(${index}, event)">&times;</span>
+                        <div class="name">${escapeHtml(name)}</div>
+                        <div class="info">${escapeHtml(date)}</div>
+                        <div class="info">${gpoObjectCount} GPOs (${gpoSettingsCount} settings), ${mdmCount} MDM</div>
                     </div>
-                    <div class="section-body">
-                        <div class="gpo-list">
-                            ${appliedGPOs.map(gpo => `
-                                <div class="gpo-item">
-                                    <span class="gpo-name">${escapeHtml(gpo.Name || gpo.DisplayName || 'Unknown')}</span>
-                                    ${gpo.LinkOrder ? `<span class="gpo-link-order">Link: ${gpo.LinkOrder}</span>` : ''}
-                                </div>
-                            `).join('')}
+                `;
+            }).join('');
+
+            updateNavButtons();
+        }
+
+        function selectDevice(index) {
+            const idx = AppState.selectedDevices.indexOf(index);
+            if (idx > -1) {
+                AppState.selectedDevices.splice(idx, 1);
+            } else {
+                if (AppState.selectedDevices.length >= 2) {
+                    AppState.selectedDevices.shift();
+                }
+                AppState.selectedDevices.push(index);
+            }
+            renderDeviceCards();
+        }
+
+        function updateNavButtons() {
+            const btnViewSingle = document.getElementById('btn-view-single');
+            const btnCompare = document.getElementById('btn-compare');
+            const navSingle = document.getElementById('nav-single');
+            const navCompare = document.getElementById('nav-compare');
+
+            btnViewSingle.disabled = AppState.selectedDevices.length !== 1;
+            btnCompare.disabled = AppState.selectedDevices.length !== 2;
+            navSingle.disabled = AppState.devices.length === 0;
+            navCompare.disabled = AppState.devices.length < 2;
+        }
+
+        // View switching
+        function showView(viewName) {
+            AppState.currentView = viewName;
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(`view-${viewName}`).classList.add('active');
+
+            document.querySelectorAll('.nav-actions .btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`nav-${viewName}`)?.classList.add('active');
+        }
+
+        function viewSelectedDevice() {
+            if (AppState.selectedDevices.length === 1) {
+                const device = AppState.devices[AppState.selectedDevices[0]];
+                renderSingleView(device);
+                showView('single');
+            }
+        }
+
+        function compareSelectedDevices() {
+            if (AppState.selectedDevices.length === 2) {
+                const device1 = AppState.devices[AppState.selectedDevices[0]];
+                const device2 = AppState.devices[AppState.selectedDevices[1]];
+                renderCompareView(device1, device2);
+                showView('compare');
+            }
+        }
+
+        // Single device rendering
+        function renderSingleView(device) {
+            const container = document.getElementById('single-content');
+            const name = device.device?.computerName || 'Unknown Device';
+            const enrolled = device.mdmData?.IsEnrolled;
+
+            container.innerHTML = `
+                <div class="report-header">
+                    <h1>${escapeHtml(name)}
+                        ${enrolled ? '<span class="badge badge-enrolled">MDM Enrolled</span>' : '<span class="badge badge-not-enrolled">Not Enrolled</span>'}
+                    </h1>
+                    <div class="subtitle">Exported: ${device.exportedAt ? formatDate(device.exportedAt) : 'Unknown'} | OS: ${escapeHtml(device.device?.osVersion || 'Unknown')}</div>
+                </div>
+                ${renderSummaryCards(device)}
+                ${renderCallouts(device)}
+                ${renderOverlapSection(device)}
+                ${renderProfilesSection(device)}
+                ${renderAppsSection(device)}
+                ${renderGroupsSection(device)}
+                ${renderGPOSection(device)}
+                ${renderMDMSection(device)}
+                ${renderSCCMSection(device)}
+            `;
+
+            initCollapsibles();
+        }
+
+        function renderSummaryCards(device) {
+            const gpoObjectCount = device.gpoData?.TotalGPOCount || 0;
+            const gpoSettingsCount = device.gpoData?.RegistryPolicies?.length || 0;
+            const mdmCount = (device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0);
+            const sccmInstalled = device.sccmData?.IsInstalled || false;
+            const analysis = device.analysis?.Summary || {};
+            const matches = analysis.BothConfiguredMatch || 0;
+            const conflicts = analysis.ValuesInConflict || 0;
+            const migrationReady = analysis.GPOOnlyWithMapping || 0;
+            const noMapping = analysis.GPOOnlyNoMapping || 0;
+
+            return `
+                <div class="summary-section">
+                    <div class="summary-section-header">Policy Sources</div>
+                    <div class="summary-grid">
+                        <div class="summary-card blue">
+                            <span class="number">${gpoObjectCount}</span>
+                            <span class="label">GPOs Applied</span>
+                            <span class="description">Group Policy Objects</span>
+                        </div>
+                        <div class="summary-card blue">
+                            <span class="number">${gpoSettingsCount}</span>
+                            <span class="label">GPO Settings</span>
+                            <span class="description">Registry policies from GPO</span>
+                        </div>
+                        <div class="summary-card blue">
+                            <span class="number">${mdmCount}</span>
+                            <span class="label">MDM Settings</span>
+                            <span class="description">Policies from Intune/MDM</span>
+                        </div>
+                        <div class="summary-card ${sccmInstalled ? 'green' : 'gray'} status">
+                            <span class="number">${sccmInstalled ? 'Installed' : 'Not Installed'}</span>
+                            <span class="label">SCCM Status</span>
+                            <span class="description">${sccmInstalled ? 'ConfigMgr client detected' : 'No ConfigMgr client'}</span>
                         </div>
                     </div>
                 </div>
-            ` : totalGPOs > 0 ? `<div class="info-box info">${totalGPOs} GPO(s) detected. Names not available.</div>` : ''}
-            
-            ${registryPolicies.length > 0 ? `
+                <div class="summary-section">
+                    <div class="summary-section-header">Overlap Analysis</div>
+                    <div class="summary-grid">
+                        <div class="summary-card green">
+                            <span class="number">${matches}</span>
+                            <span class="label">Matches</span>
+                            <span class="description">Same setting, same value</span>
+                        </div>
+                        <div class="summary-card red">
+                            <span class="number">${conflicts}</span>
+                            <span class="label">Conflicts</span>
+                            <span class="description">Same setting, different values</span>
+                        </div>
+                        <div class="summary-card cyan">
+                            <span class="number">${migrationReady}</span>
+                            <span class="label">Migration Ready</span>
+                            <span class="description">GPO-only with Intune mapping</span>
+                        </div>
+                        <div class="summary-card magenta">
+                            <span class="number">${noMapping}</span>
+                            <span class="label">No Mapping</span>
+                            <span class="description">GPO-only, no Intune equivalent</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCallouts(device) {
+            const analysis = device.analysis?.Summary || {};
+            const conflicts = analysis.ValuesInConflict || 0;
+            const migrationReady = analysis.GPOOnlyWithMapping || 0;
+
+            let html = '';
+
+            if (conflicts > 0) {
+                html += `
+                    <div class="callout warning">
+                        <span class="callout-icon">⚠️</span>
+                        <span class="callout-text"><strong>${conflicts} conflict${conflicts > 1 ? 's' : ''} detected</strong> - These settings have different values in GPO vs Intune and need review.</span>
+                    </div>
+                `;
+            }
+
+            if (migrationReady > 0) {
+                html += `
+                    <div class="callout info">
+                        <span class="callout-icon">📋</span>
+                        <span class="callout-text"><strong>${migrationReady} setting${migrationReady > 1 ? 's' : ''} ready for migration</strong> - These GPO settings have known Intune equivalents.</span>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        function renderGPOSection(device) {
+            const settings = device.gpoData?.RegistryPolicies || [];
+            if (settings.length === 0) {
+                return `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>GPO Registry Settings (0)</h2>
+                            <span class="toggle">&#9660;</span>
+                        </div>
+                        <div class="section-body">
+                            <p style="color: var(--text-secondary);">No GPO registry settings found.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>Registry Settings (${registryPolicies.length})</h2>
-                        <span class="toggle">▼</span>
+                        <h2>GPO Registry Settings (${settings.length})</h2>
+                        <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
+                        <div class="info-box explanation">
+                            Registry-based policies detected from Group Policy. Review these when planning migration to Intune.
+                        </div>
                         <div class="filter-bar">
-                            <input type="text" id="gpo-search" placeholder="Search settings..." oninput="filterTable('gpo-registry-table', this.value)">
-                            <select id="gpo-scope" onchange="filterGPOByScope()">
-                                <option value="">All Scopes</option>
-                                <option value="Machine">Machine</option>
-                                <option value="User">User</option>
+                            <input type="text" id="gpo-search" placeholder="Search GPO settings..." oninput="filterTable('gpo-table', 'gpo-search')">
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="gpo-table">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Path</th>
+                                        <th>Value Name</th>
+                                        <th>Value</th>
+                                        <th>Scope</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${settings.map(s => `
+                                        <tr>
+                                            <td>${escapeHtml(s.Category || '')}</td>
+                                            <td style="font-size: 0.8rem;">${escapeHtml(s.Path || '')}</td>
+                                            <td>${escapeHtml(s.ValueName || '')}</td>
+                                            <td>${escapeHtml(formatValue(s.Data))}</td>
+                                            <td>${escapeHtml(s.Scope || '')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMDMSection(device) {
+            const mdm = device.mdmData || {};
+            const enrollments = mdm.Enrollments || [];
+            const isEnrolled = mdm.IsEnrolled;
+            const devicePolicies = mdm.DevicePolicies || [];
+            const userPolicies = mdm.UserPolicies || [];
+            const allPolicies = [...devicePolicies, ...userPolicies];
+
+            let enrollmentHtml = '';
+            if (isEnrolled && enrollments.length > 0) {
+                const enr = enrollments[0];
+                enrollmentHtml = `
+                    <div class="info-box success">MDM Enrolled</div>
+                    <div class="enrollment-grid">
+                        ${enr.ProviderId ? `<div class="enrollment-item"><div class="key">Provider</div><div class="value">${escapeHtml(enr.ProviderId)}</div></div>` : ''}
+                        ${enr.UPN ? `<div class="enrollment-item"><div class="key">UPN</div><div class="value">${escapeHtml(enr.UPN)}</div></div>` : ''}
+                        ${enr.AADTenantId ? `<div class="enrollment-item"><div class="key">Tenant ID</div><div class="value">${escapeHtml(enr.AADTenantId)}</div></div>` : ''}
+                        ${enr.EnrollmentId ? `<div class="enrollment-item"><div class="key">Enrollment ID</div><div class="value">${escapeHtml(enr.EnrollmentId)}</div></div>` : ''}
+                    </div>
+                `;
+            } else {
+                enrollmentHtml = '<div class="info-box warning">Device is not MDM enrolled</div>';
+            }
+
+            let policiesHtml = '';
+            if (allPolicies.length > 0) {
+                policiesHtml = `
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">MDM Policies (${allPolicies.length})</h3>
+                    <div class="filter-bar">
+                        <input type="text" id="mdm-search" placeholder="Search MDM policies..." oninput="filterTable('mdm-table', 'mdm-search')">
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="mdm-table">
+                            <thead>
+                                <tr>
+                                    <th>Area</th>
+                                    <th>Setting</th>
+                                    <th>Value</th>
+                                    <th>Scope</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${allPolicies.map(p => `
+                                    <tr>
+                                        <td>${escapeHtml(p.Area || '')}</td>
+                                        <td>${escapeHtml(p.Setting || '')}</td>
+                                        <td>${escapeHtml(formatValue(p.Value))}</td>
+                                        <td>${escapeHtml(p.Scope || '')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>MDM Settings</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="info-box explanation">
+                            Policies currently applied to this device via Intune/MDM enrollment.
+                        </div>
+                        ${enrollmentHtml}
+                        ${policiesHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSCCMSection(device) {
+            const sccm = device.sccmData;
+            if (!sccm || !sccm.IsInstalled) {
+                return `
+                    <div class="section">
+                        <div class="section-header collapsed">
+                            <h2>SCCM/ConfigMgr</h2>
+                            <span class="toggle">&#9660;</span>
+                        </div>
+                        <div class="section-body hidden">
+                            <div class="info-box warning">SCCM client not installed on this device</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const clientInfo = sccm.ClientInfo || {};
+            const apps = sccm.Applications || [];
+            const baselines = sccm.Baselines || [];
+            const updates = sccm.Updates || [];
+
+            let clientHtml = `
+                <div class="info-box explanation">
+                    Configuration Manager client data - applications, compliance baselines, and software updates managed by SCCM.
+                </div>
+                <h3 style="margin-bottom: 10px; color: var(--text-secondary);">Client Information</h3>
+                <div class="enrollment-grid">
+                    ${clientInfo.ClientVersion ? `<div class="enrollment-item"><div class="key">Client Version</div><div class="value">${escapeHtml(clientInfo.ClientVersion)}</div></div>` : ''}
+                    ${clientInfo.SiteCode ? `<div class="enrollment-item"><div class="key">Site Code</div><div class="value">${escapeHtml(clientInfo.SiteCode)}</div></div>` : ''}
+                    ${clientInfo.ManagementPoint ? `<div class="enrollment-item"><div class="key">Management Point</div><div class="value">${escapeHtml(clientInfo.ManagementPoint)}</div></div>` : ''}
+                    ${clientInfo.ClientId ? `<div class="enrollment-item"><div class="key">Client ID</div><div class="value" style="font-size: 0.8rem;">${escapeHtml(clientInfo.ClientId)}</div></div>` : ''}
+                </div>
+            `;
+
+            let appsHtml = '';
+            if (apps.length > 0) {
+                appsHtml = `
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">SCCM Applications (${apps.length})</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Publisher</th>
+                                    <th>Version</th>
+                                    <th>Install State</th>
+                                    <th>Required</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${apps.map(app => `
+                                    <tr>
+                                        <td>${escapeHtml(app.Name || '')}</td>
+                                        <td>${escapeHtml(app.Publisher || '')}</td>
+                                        <td>${escapeHtml(app.Version || '')}</td>
+                                        <td><span class="status-tag ${app.InstallState === 'Installed' ? 'both-match' : 'no-mapping'}">${escapeHtml(app.InstallState || '')}</span></td>
+                                        <td>${app.IsRequired ? 'Yes' : 'No'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            let baselinesHtml = '';
+            if (baselines.length > 0) {
+                baselinesHtml = `
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Compliance Baselines (${baselines.length})</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Version</th>
+                                    <th>Compliance State</th>
+                                    <th>Last Evaluated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${baselines.map(b => {
+                                    const stateClass = b.ComplianceState === 'Compliant' ? 'both-match' :
+                                                      b.ComplianceState === 'Non-Compliant' ? 'conflict' : 'no-mapping';
+                                    return `
+                                        <tr>
+                                            <td>${escapeHtml(b.Name || '')}</td>
+                                            <td>${escapeHtml(b.Version || '')}</td>
+                                            <td><span class="status-tag ${stateClass}">${escapeHtml(b.ComplianceState || '')}</span></td>
+                                            <td>${b.LastEvaluated ? new Date(b.LastEvaluated).toLocaleString() : '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            let updatesHtml = '';
+            if (updates.length > 0) {
+                const requiredUpdates = updates.filter(u => u.IsRequired);
+                updatesHtml = `
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Software Updates (${updates.length} total, ${requiredUpdates.length} required)</h3>
+                    <div class="table-wrapper" style="max-height: 300px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Article ID</th>
+                                    <th>Name</th>
+                                    <th>State</th>
+                                    <th>Required</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${updates.slice(0, 50).map(u => `
+                                    <tr>
+                                        <td>${escapeHtml(u.ArticleID || '')}</td>
+                                        <td style="font-size: 0.85rem;">${escapeHtml(u.Name || '')}</td>
+                                        <td>${escapeHtml(u.EvaluationState || '')}</td>
+                                        <td>${u.IsRequired ? 'Yes' : 'No'}</td>
+                                    </tr>
+                                `).join('')}
+                                ${updates.length > 50 ? `<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">... and ${updates.length - 50} more updates</td></tr>` : ''}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header collapsed">
+                        <h2>SCCM/ConfigMgr</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body hidden">
+                        ${clientHtml}
+                        ${appsHtml}
+                        ${baselinesHtml}
+                        ${updatesHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOverlapSection(device) {
+            const overlap = device.analysis?.DetailedResults || [];
+            if (overlap.length === 0) {
+                return `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>Overlap Analysis (0)</h2>
+                            <span class="toggle">&#9660;</span>
+                        </div>
+                        <div class="section-body">
+                            <p style="color: var(--text-secondary);">No overlap analysis data available.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Overlap Analysis (${overlap.length})</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="info-box explanation">
+                            Compare GPO settings against Intune policies. <strong>Conflicts</strong> need resolution. <strong>Migration Ready</strong> settings can be moved to Intune.
+                        </div>
+                        <div class="legend-box">
+                            <div class="legend-item">
+                                <span class="legend-color match"></span>
+                                <span><span class="legend-label">Match</span> <span class="legend-desc">- Same value in both</span></span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color conflict"></span>
+                                <span><span class="legend-label">Conflict</span> <span class="legend-desc">- Different values, needs review</span></span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color migration"></span>
+                                <span><span class="legend-label">Migration Ready</span> <span class="legend-desc">- Can migrate to Intune</span></span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color nomapping"></span>
+                                <span><span class="legend-label">No Mapping</span> <span class="legend-desc">- No Intune equivalent</span></span>
+                            </div>
+                        </div>
+                        <div class="filter-bar">
+                            <input type="text" id="overlap-search" placeholder="Search..." oninput="filterOverlapTable()">
+                            <select id="overlap-status-filter" onchange="filterOverlapTable()">
+                                <option value="">All Statuses</option>
+                                <option value="BothConfigured">Both Configured</option>
+                                <option value="GPOOnly_MappingExists">Migration Ready</option>
+                                <option value="GPOOnly_NoMapping">No MDM Mapping</option>
                             </select>
                         </div>
                         <div class="table-wrapper">
-                            <table id="gpo-registry-table">
-                                <thead><tr><th>Category</th><th>Path</th><th>Value Name</th><th>Value</th><th>Scope</th></tr></thead>
+                            <table id="overlap-table">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Category</th>
+                                        <th>Setting</th>
+                                        <th>GPO Value</th>
+                                        <th>MDM Setting</th>
+                                        <th>MDM Value</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
-                                    ${registryPolicies.map(p => `
-                                        <tr data-scope="${escapeHtml(p.Scope || '')}">
-                                            <td>${escapeHtml(p.Category || '-')}</td>
-                                            <td class="path-cell">${escapeHtml(p.Path || '-')}</td>
-                                            <td>${escapeHtml(p.ValueName || '-')}</td>
-                                            <td>${escapeHtml(formatValue(p.Data))}</td>
-                                            <td><span class="scope-badge scope-${(p.Scope || '').toLowerCase()}">${escapeHtml(p.Scope || '-')}</span></td>
-                                        </tr>
-                                    `).join('')}
+                                    ${overlap.map(o => {
+                                        let rowClass = '';
+                                        let statusClass = '';
+                                        let statusText = '';
+
+                                        if (o.Status === 'BothConfigured') {
+                                            if (o.ValuesMatch) {
+                                                rowClass = 'status-both-match';
+                                                statusClass = 'both-match';
+                                                statusText = 'Match';
+                                            } else {
+                                                rowClass = 'status-both-conflict';
+                                                statusClass = 'conflict';
+                                                statusText = 'Conflict';
+                                            }
+                                        } else if (o.Status === 'GPOOnly_MappingExists') {
+                                            rowClass = 'status-gpo-mapping';
+                                            statusClass = 'migration-ready';
+                                            statusText = 'Migration Ready';
+                                        } else if (o.Status === 'GPOOnly_NoMapping') {
+                                            rowClass = 'status-gpo-nomapping';
+                                            statusClass = 'no-mapping';
+                                            statusText = 'No Mapping';
+                                        }
+
+                                        const mdmSetting = o.MDMArea && o.MDMSetting ? `${o.MDMArea}/${o.MDMSetting}` : '-';
+
+                                        return `
+                                            <tr class="${rowClass}" data-status="${o.Status}">
+                                                <td><span class="status-tag ${statusClass}">${statusText}</span></td>
+                                                <td>${escapeHtml(o.Category || '-')}</td>
+                                                <td>${escapeHtml(o.GPOValueName || '-')}</td>
+                                                <td>${escapeHtml(formatValue(o.GPOValue))}</td>
+                                                <td>${escapeHtml(mdmSetting)}</td>
+                                                <td>${escapeHtml(formatValue(o.MDMValue))}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-            ` : '<div class="info-box warning">No GPO registry settings found.</div>'}
-        </div>
-    `;
-}
+            `;
+        }
 
-function filterGPOByScope() {
-    const search = (document.getElementById('gpo-search')?.value || '').toLowerCase();
-    const scope = document.getElementById('gpo-scope')?.value || '';
-    const table = document.getElementById('gpo-registry-table');
-    if (!table) return;
-    
-    table.querySelectorAll('tbody tr').forEach(row => {
-        const matchesSearch = row.textContent.toLowerCase().includes(search);
-        const matchesScope = !scope || row.dataset.scope === scope;
-        row.style.display = (matchesSearch && matchesScope) ? '' : 'none';
-    });
-}
+        function renderAppsSection(device) {
+            const appData = device.appData;
+            if (!appData?.Available) {
+                return '';
+            }
 
-// Intune Tab
-function renderIntuneTab(deviceData) {
-    const mdmData = deviceData.mdmData || {};
-    const isEnrolled = mdmData.IsEnrolled || false;
-    const devicePolicies = mdmData.DevicePolicies || [];
-    const userPolicies = mdmData.UserPolicies || [];
-    const allPolicies = [...devicePolicies, ...userPolicies];
+            const groupData = device.groupData;
+            const deviceGroupIds = getDeviceGroupIds(groupData);
+            const allApps = appData.AssignedApps || [];
+            const totalAppsInTenant = appData.Apps?.length || 0;
 
-    return `
-        <div class="source-tab-content" id="tab-intune">
-            <div class="summary-grid" style="margin-bottom: var(--space-lg);">
-                <div class="summary-card ${isEnrolled ? 'green' : 'yellow'}">
-                    <span class="number">${isEnrolled ? '✓' : '✗'}</span>
-                    <span class="label">Enrollment</span>
-                </div>
-                <div class="summary-card blue">
-                    <span class="number">${allPolicies.length}</span>
-                    <span class="label">MDM Policies</span>
-                </div>
-            </div>
-            
-            ${!isEnrolled ? `
-                <div class="callout warning">
-                    <span class="callout-icon">⚠️</span>
-                    <span class="callout-text">Device is not MDM enrolled. Intune policies cannot be applied.</span>
-                </div>
-            ` : ''}
-            
-            ${allPolicies.length > 0 ? `
-                <div class="section">
-                    <div class="section-header">
-                        <h2>MDM Policy Settings (${allPolicies.length})</h2>
-                        <span class="toggle">▼</span>
-                    </div>
-                    <div class="section-body">
-                        <div class="filter-bar">
-                            <input type="text" id="mdm-search" placeholder="Search policies..." oninput="filterTable('mdm-policies-table', this.value)">
+            // Filter apps to only those assigned to this device
+            const applicableApps = allApps.filter(app => appAppliesToDevice(app, deviceGroupIds));
+
+            const hasGroupData = groupData?.Available && groupData?.DeviceFound && deviceGroupIds.length > 0;
+
+            // Separate by intent
+            const requiredApps = applicableApps.filter(app =>
+                (app.Assignments || []).some(a =>
+                    a.Intent === 'Required' && assignmentAppliesToDevice(a, deviceGroupIds)
+                )
+            );
+            const availableApps = applicableApps.filter(app =>
+                (app.Assignments || []).some(a =>
+                    a.Intent === 'Available' && assignmentAppliesToDevice(a, deviceGroupIds)
+                ) && !requiredApps.includes(app)
+            );
+
+            if (applicableApps.length === 0 && hasGroupData) {
+                return `
+                    <div class="section">
+                        <div class="section-header collapsed">
+                            <h2>Intune App Assignments (0 of ${allApps.length})</h2>
+                            <span class="toggle">&#9660;</span>
                         </div>
-                        <div class="table-wrapper">
-                            <table id="mdm-policies-table">
-                                <thead><tr><th>Area</th><th>Setting</th><th>Value</th><th>Scope</th></tr></thead>
-                                <tbody>
-                                    ${allPolicies.map(p => `
-                                        <tr>
-                                            <td>${escapeHtml(p.Area || '-')}</td>
-                                            <td>${escapeHtml(p.Setting || '-')}</td>
-                                            <td>${escapeHtml(formatValue(p.Value))}</td>
-                                            <td><span class="scope-badge scope-${(p.Scope || '').toLowerCase()}">${escapeHtml(p.Scope || '-')}</span></td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            ` : ''}
-        </div>
-    `;
-}
-
-// SCCM Tab
-function renderSCCMTab(deviceData) {
-    const sccmData = deviceData.sccmData || {};
-    const isInstalled = sccmData.IsInstalled || false;
-
-    if (!isInstalled) {
-        return `
-            <div class="source-tab-content" id="tab-sccm">
-                <div class="summary-grid" style="margin-bottom: var(--space-lg);">
-                    <div class="summary-card yellow">
-                        <span class="number">✗</span>
-                        <span class="label">SCCM Client</span>
-                    </div>
-                </div>
-                <div class="callout warning">
-                    <span class="callout-icon">⚠️</span>
-                    <span class="callout-text">SCCM/ConfigMgr client is not installed on this device.</span>
-                </div>
-            </div>
-        `;
-    }
-
-    const apps = sccmData.Applications || [];
-    const baselines = sccmData.Baselines || [];
-
-    return `
-        <div class="source-tab-content" id="tab-sccm">
-            <div class="summary-grid" style="margin-bottom: var(--space-lg);">
-                <div class="summary-card green">
-                    <span class="number">✓</span>
-                    <span class="label">SCCM Client</span>
-                </div>
-                <div class="summary-card blue">
-                    <span class="number">${apps.length}</span>
-                    <span class="label">Applications</span>
-                </div>
-                <div class="summary-card cyan">
-                    <span class="number">${baselines.length}</span>
-                    <span class="label">Baselines</span>
-                </div>
-            </div>
-            
-            ${apps.length > 0 ? `
-                <div class="section">
-                    <div class="section-header">
-                        <h2>Applications (${apps.length})</h2>
-                        <span class="toggle">▼</span>
-                    </div>
-                    <div class="section-body">
-                        <div class="table-wrapper">
-                            <table>
-                                <thead><tr><th>Name</th><th>Publisher</th><th>Version</th><th>State</th></tr></thead>
-                                <tbody>
-                                    ${apps.map(a => `
-                                        <tr>
-                                            <td><strong>${escapeHtml(a.Name || '-')}</strong></td>
-                                            <td>${escapeHtml(a.Publisher || '-')}</td>
-                                            <td>${escapeHtml(a.Version || '-')}</td>
-                                            <td><span class="status-tag ${a.InstallState === 'Installed' ? 'both-match' : 'no-mapping'}">${escapeHtml(a.InstallState || '-')}</span></td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            ` : ''}
-        </div>
-    `;
-}
-
-// Azure AD Tab
-function renderAzureADTab(deviceData) {
-    const groupData = deviceData.groupData || {};
-
-    if (!groupData.Available || !groupData.DeviceFound) {
-        return `
-            <div class="source-tab-content" id="tab-azuread">
-                <div class="summary-grid" style="margin-bottom: var(--space-lg);">
-                    <div class="summary-card yellow">
-                        <span class="number">?</span>
-                        <span class="label">Azure AD</span>
-                    </div>
-                </div>
-                <div class="callout warning">
-                    <span class="callout-icon">⚠️</span>
-                    <span class="callout-text">Azure AD group data not available. Run export with -IncludeGraph.</span>
-                </div>
-            </div>
-        `;
-    }
-
-    const groups = groupData.Groups || [];
-    const dynamicGroups = groups.filter(g => g.GroupType === 'Dynamic');
-    const assignedGroups = groups.filter(g => g.GroupType !== 'Dynamic');
-
-    return `
-        <div class="source-tab-content" id="tab-azuread">
-            <div class="summary-grid" style="margin-bottom: var(--space-lg);">
-                <div class="summary-card blue">
-                    <span class="number">${groups.length}</span>
-                    <span class="label">Total Groups</span>
-                </div>
-                <div class="summary-card cyan">
-                    <span class="number">${dynamicGroups.length}</span>
-                    <span class="label">Dynamic</span>
-                </div>
-                <div class="summary-card magenta">
-                    <span class="number">${assignedGroups.length}</span>
-                    <span class="label">Assigned</span>
-                </div>
-            </div>
-            
-            ${groups.length > 0 ? `
-                <div class="section">
-                    <div class="section-header">
-                        <h2>Group Memberships (${groups.length})</h2>
-                        <span class="toggle">▼</span>
-                    </div>
-                    <div class="section-body">
-                        ${dynamicGroups.length > 0 ? `
-                            <h3 style="margin-bottom: var(--space-sm); color: var(--accent-cyan);">Dynamic (${dynamicGroups.length})</h3>
-                            <div class="group-list" style="margin-bottom: var(--space-md);">
-                                ${dynamicGroups.map(g => `<span class="group-chip dynamic">${escapeHtml(g.DisplayName || 'Unknown')}</span>`).join('')}
+                        <div class="section-body hidden">
+                            <div class="info-box info">
+                                No Intune apps are assigned to this device or its ${deviceGroupIds.length} groups.
+                                (${totalAppsInTenant} apps exist in tenant, ${allApps.length} have assignments)
                             </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Build info message
+            let infoMessage = '';
+            if (!hasGroupData) {
+                // No group data - we can only show "All Devices" / "All Users" apps
+                if (applicableApps.length > 0) {
+                    infoMessage = `
+                        <div class="info-box warning">
+                            Group membership data not available - showing only apps assigned to "All Devices" or "All Users".
+                            (${applicableApps.length} of ${allApps.length} assigned apps)
+                        </div>
+                    `;
+                } else {
+                    infoMessage = `
+                        <div class="info-box warning">
+                            Group membership data not available. No apps assigned to "All Devices" or "All Users" found.
+                            Run with <code>-IncludeGraph</code> to see group-targeted apps.
+                        </div>
+                    `;
+                }
+            } else {
+                infoMessage = `
+                    <div class="info-box explanation">
+                        Showing <strong>${applicableApps.length} of ${allApps.length}</strong> assigned apps that apply to this device.
+                        (${totalAppsInTenant} total apps in tenant)
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header collapsed">
+                        <h2>Intune App Assignments (${applicableApps.length} of ${allApps.length})</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body hidden">
+                        ${infoMessage}
+                        ${requiredApps.length > 0 ? `
+                            <h3 style="margin: 15px 0 10px; color: var(--accent-yellow);">Required Apps (${requiredApps.length})</h3>
+                            ${requiredApps.map(app => renderAppCard(app, deviceGroupIds, groupData)).join('')}
                         ` : ''}
-                        ${assignedGroups.length > 0 ? `
-                            <h3 style="margin-bottom: var(--space-sm); color: var(--accent-blue);">Assigned (${assignedGroups.length})</h3>
+                        ${availableApps.length > 0 ? `
+                            <h3 style="margin: 15px 0 10px; color: var(--accent-green);">Available Apps (${availableApps.length})</h3>
+                            ${availableApps.map(app => renderAppCard(app, deviceGroupIds, groupData)).join('')}
+                        ` : ''}
+                        ${!hasGroupData ? appsToShow.map(app => renderAppCard(app, deviceGroupIds, groupData)).join('') : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Check if an app applies to the device
+        function appAppliesToDevice(app, deviceGroupIds) {
+            const assignments = app.Assignments || [];
+            return assignments.some(a => assignmentAppliesToDevice(a, deviceGroupIds));
+        }
+
+        // Check if a single assignment applies to the device
+        function assignmentAppliesToDevice(assignment, deviceGroupIds) {
+            const targetType = assignment.TargetType || '';
+            const groupId = assignment.GroupId;
+
+            // "All Devices" or "All Users" applies to everyone
+            if (targetType === 'All Devices' || targetType === 'All Users') {
+                return true;
+            }
+
+            // Group-based assignment - check if device is in that group
+            if (targetType.startsWith('Group:') && groupId && deviceGroupIds.includes(groupId)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        // Render a single app card
+        function renderAppCard(app, deviceGroupIds, groupData) {
+            const applicableAssignments = (app.Assignments || []).filter(a =>
+                assignmentAppliesToDevice(a, deviceGroupIds)
+            );
+
+            const assignmentBadges = applicableAssignments.map(a => {
+                const intentClass = a.Intent?.toLowerCase() === 'required' ? 'required' : 'available';
+                let targetLabel = '';
+
+                if (a.TargetType === 'All Devices') {
+                    targetLabel = '<span class="status-tag both-match">All Devices</span>';
+                } else if (a.TargetType === 'All Users') {
+                    targetLabel = '<span class="status-tag migration-ready">All Users</span>';
+                } else if (a.GroupId && groupData?.Groups) {
+                    const group = groupData.Groups.find(g => g.ObjectId === a.GroupId);
+                    const groupName = group?.DisplayName || 'Group';
+                    targetLabel = `<span class="status-tag mdm-only">${escapeHtml(groupName)}</span>`;
+                } else {
+                    targetLabel = `<span class="status-tag">${escapeHtml(a.TargetType || '')}</span>`;
+                }
+
+                return `<span class="app-intent ${intentClass}">${escapeHtml(a.Intent || '')}</span> ${targetLabel}`;
+            }).join(' ');
+
+            return `
+                <div class="app-card">
+                    <div class="app-name">${escapeHtml(app.DisplayName || 'Unknown App')}</div>
+                    <div class="app-type">${escapeHtml(app.AppType || '')} ${app.Publisher ? '- ' + escapeHtml(app.Publisher) : ''}</div>
+                    <div style="margin-top: 6px;">${assignmentBadges}</div>
+                </div>
+            `;
+        }
+
+        function renderGroupsSection(device) {
+            const groupData = device.groupData;
+            if (!groupData?.Available || !groupData?.DeviceFound || !groupData?.Groups?.length) {
+                return '';
+            }
+
+            const groups = groupData.Groups;
+            const deviceInfo = groupData.Device;
+
+            // Separate groups by type
+            const dynamicGroups = groups.filter(g => g.GroupType === 'Dynamic');
+            const assignedGroups = groups.filter(g => g.GroupType !== 'Dynamic');
+
+            const renderGroupChips = (groupList, typeClass) => {
+                if (!groupList.length) return '<span style="color: var(--text-secondary); font-style: italic;">None</span>';
+                return groupList.map(g =>
+                    `<span class="group-chip ${typeClass}" title="${escapeHtml(g.Description || 'No description')}">${escapeHtml(g.DisplayName || 'Unknown Group')}</span>`
+                ).join('');
+            };
+
+            return `
+                <div class="section">
+                    <div class="section-header collapsed">
+                        <h2>Azure AD Device & Group Memberships (${groups.length} groups)</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body hidden">
+                        ${deviceInfo ? `
+                            <div class="enrollment-grid">
+                                <div class="enrollment-item"><div class="key">Display Name</div><div class="value">${escapeHtml(deviceInfo.DisplayName || '-')}</div></div>
+                                <div class="enrollment-item"><div class="key">Device ID</div><div class="value">${escapeHtml(deviceInfo.DeviceId || '-')}</div></div>
+                                <div class="enrollment-item"><div class="key">OS</div><div class="value">${escapeHtml(deviceInfo.OperatingSystem || '')} ${escapeHtml(deviceInfo.OSVersion || '')}</div></div>
+                                <div class="enrollment-item"><div class="key">Trust Type</div><div class="value">${escapeHtml(deviceInfo.TrustType || '-')}</div></div>
+                                <div class="enrollment-item"><div class="key">Managed</div><div class="value">${deviceInfo.IsManaged || '-'}</div></div>
+                                <div class="enrollment-item"><div class="key">Compliant</div><div class="value">${deviceInfo.IsCompliant || '-'}</div></div>
+                            </div>
+                            <hr style="border-color: var(--border-color); margin: 15px 0;">
+                        ` : ''}
+
+                        <div class="group-category">
+                            <h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--cyan);">Dynamic Memberships (${dynamicGroups.length})</h3>
                             <div class="group-list">
-                                ${assignedGroups.map(g => `<span class="group-chip assigned">${escapeHtml(g.DisplayName || 'Unknown')}</span>`).join('')}
+                                ${renderGroupChips(dynamicGroups, 'dynamic')}
                             </div>
-                        ` : ''}
+                        </div>
+
+                        <div class="group-category" style="margin-top: 20px;">
+                            <h3 style="margin-bottom: 10px; font-size: 1rem; color: var(--blue);">Assigned Memberships (${assignedGroups.length})</h3>
+                            <div class="group-list">
+                                ${renderGroupChips(assignedGroups, 'assigned')}
+                            </div>
+                        </div>
                     </div>
                 </div>
-            ` : '<div class="info-box info">No group memberships found.</div>'}
-        </div>
-    `;
-}
+            `;
+        }
 
-// Migration Analysis
-function renderMigrationAnalysis(deviceData) {
-    const analysis = deviceData.analysis || {};
-    const summary = analysis.Summary || {};
-    const matches = summary.BothConfiguredMatch || 0;
-    const conflicts = summary.ValuesInConflict || 0;
-    const migrationReady = summary.GPOOnlyWithMapping || 0;
-    const noMapping = summary.GPOOnlyNoMapping || 0;
-    const total = matches + conflicts + migrationReady + noMapping;
+        function renderProfilesSection(device) {
+            const graphData = device.graphData;
+            if (!graphData?.Available) {
+                return '';
+            }
 
-    if (total === 0) return '';
+            const groupData = device.groupData;
+            const deviceGroupIds = getDeviceGroupIds(groupData);
 
-    return `
-        <div class="section migration-section" style="margin-top: var(--space-xl);">
-            <div class="section-header collapsed">
-                <h2>📊 Migration Analysis (${total} settings)</h2>
-                <span class="toggle">▼</span>
-            </div>
-            <div class="section-body hidden">
-                <div class="info-box explanation">GPO vs Intune/MDM policy overlap analysis.</div>
-                <div class="summary-grid">
-                    <div class="summary-card green">
-                        <span class="number">${matches}</span>
-                        <span class="label">Matches</span>
+            const profiles = graphData.Profiles || [];
+            const compliance = graphData.CompliancePolicies || [];
+            const settingsCatalog = graphData.SettingsCatalog || [];
+            const totalCount = profiles.length + compliance.length + settingsCatalog.length;
+
+            if (totalCount === 0) {
+                return '';
+            }
+
+            // Filter to only policies that apply to this device
+            const applicableProfiles = profiles.filter(p => policyAppliesToDevice(p, deviceGroupIds));
+            const applicableCompliance = compliance.filter(p => policyAppliesToDevice(p, deviceGroupIds));
+            const applicableCatalog = settingsCatalog.filter(p => policyAppliesToDevice(p, deviceGroupIds));
+            const applicableCount = applicableProfiles.length + applicableCompliance.length + applicableCatalog.length;
+
+            // Check if we have group data to filter
+            const hasGroupData = groupData?.Available && groupData?.DeviceFound && deviceGroupIds.length > 0;
+
+            let profilesHtml = '';
+            if (applicableProfiles.length > 0) {
+                profilesHtml = `
+                    <h3 style="margin: 15px 0 10px; color: var(--text-secondary);">Device Configuration Profiles (${applicableProfiles.length})</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Assigned Via</th>
+                                    <th>Last Modified</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${applicableProfiles.map(p => {
+                                    const profileType = (p.OdataType || '').replace('#microsoft.graph.', '').replace(/([A-Z])/g, ' $1').trim();
+                                    const assignmentReason = getAssignmentReason(p, deviceGroupIds, groupData);
+                                    return `
+                                        <tr>
+                                            <td><strong>${escapeHtml(p.DisplayName || '')}</strong></td>
+                                            <td style="font-size: 0.85rem;">${escapeHtml(profileType)}</td>
+                                            <td>${assignmentReason}</td>
+                                            <td>${p.LastModified ? new Date(p.LastModified).toLocaleDateString() : '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="summary-card red">
-                        <span class="number">${conflicts}</span>
-                        <span class="label">Conflicts</span>
+                `;
+            }
+
+            let complianceHtml = '';
+            if (applicableCompliance.length > 0) {
+                complianceHtml = `
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Compliance Policies (${applicableCompliance.length})</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Assigned Via</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${applicableCompliance.map(p => {
+                                    const policyType = (p.OdataType || '').replace('#microsoft.graph.', '').replace(/([A-Z])/g, ' $1').trim();
+                                    const assignmentReason = getAssignmentReason(p, deviceGroupIds, groupData);
+                                    return `
+                                        <tr>
+                                            <td><strong>${escapeHtml(p.DisplayName || '')}</strong></td>
+                                            <td style="font-size: 0.85rem;">${escapeHtml(policyType)}</td>
+                                            <td>${assignmentReason}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="summary-card cyan">
-                        <span class="number">${migrationReady}</span>
-                        <span class="label">Migration Ready</span>
+                `;
+            }
+
+            let catalogHtml = '';
+            if (applicableCatalog.length > 0) {
+                catalogHtml = `
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Settings Catalog Policies (${applicableCatalog.length})</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Platform</th>
+                                    <th>Technologies</th>
+                                    <th>Assigned Via</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${applicableCatalog.map(p => {
+                                    const assignmentReason = getAssignmentReason(p, deviceGroupIds, groupData);
+                                    return `
+                                        <tr>
+                                            <td><strong>${escapeHtml(p.Name || '')}</strong></td>
+                                            <td>${escapeHtml(p.Platforms || '-')}</td>
+                                            <td>${escapeHtml(p.Technologies || '-')}</td>
+                                            <td>${assignmentReason}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="summary-card magenta">
-                        <span class="number">${noMapping}</span>
-                        <span class="label">No Mapping</span>
+                `;
+            }
+
+            // Build info message based on filtering status
+            let infoMessage = '';
+            if (!hasGroupData) {
+                // No group data - we can only show "All Devices" / "All Users" policies
+                if (applicableCount > 0) {
+                    infoMessage = `
+                        <div class="info-box warning">
+                            Group membership data not available - showing only policies assigned to "All Devices" or "All Users".
+                            (${applicableCount} of ${totalCount} policies)
+                        </div>
+                    `;
+                } else {
+                    infoMessage = `
+                        <div class="info-box warning">
+                            Group membership data not available. No policies assigned to "All Devices" or "All Users" found.
+                            Run with <code>-IncludeGraph</code> to see group-targeted policies.
+                        </div>
+                    `;
+                }
+            } else if (applicableCount === 0) {
+                infoMessage = `
+                    <div class="info-box info">
+                        No Intune policies are directly assigned to this device or its ${deviceGroupIds.length} groups.
+                        (${totalCount} policies exist in tenant)
+                    </div>
+                `;
+            } else {
+                infoMessage = `
+                    <div class="info-box explanation">
+                        Showing <strong>${applicableCount} of ${totalCount}</strong> Intune policies that apply to this device
+                        (assigned via "All Devices" or device's ${deviceGroupIds.length} group memberships).
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Intune Policies Assigned to Device (${applicableCount} of ${totalCount})</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        ${infoMessage}
+                        ${profilesHtml}
+                        ${complianceHtml}
+                        ${catalogHtml}
                     </div>
                 </div>
-                ${conflicts > 0 ? `
-                    <div class="callout warning" style="margin-top: var(--space-md);">
-                        <span class="callout-icon">⚠️</span>
-                        <span class="callout-text"><strong>${conflicts} conflict(s)</strong> - Different values in GPO vs Intune. Review before migration.</span>
+            `;
+        }
+
+        // Get all group IDs the device is a member of
+        function getDeviceGroupIds(groupData) {
+            if (!groupData?.Available || !groupData?.DeviceFound || !groupData?.Groups) {
+                return [];
+            }
+            return groupData.Groups.map(g => g.ObjectId).filter(id => id);
+        }
+
+        // Check if a policy applies to the device based on assignments
+        function policyAppliesToDevice(policy, deviceGroupIds) {
+            const assignments = policy.Assignments || [];
+            if (assignments.length === 0) return false;
+
+            let isIncluded = false;
+            let isExcluded = false;
+
+            for (const assignment of assignments) {
+                const targetType = (assignment.TargetType || '').replace('#microsoft.graph.', '');
+                const groupId = assignment.GroupId;
+
+                // Check for "All Devices" or "All Users" assignments
+                if (targetType === 'allDevicesAssignmentTarget' || targetType === 'allLicensedUsersAssignmentTarget') {
+                    isIncluded = true;
+                }
+                // Check for group-based assignment
+                else if (targetType === 'groupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
+                    isIncluded = true;
+                }
+                // Check for exclusion
+                else if (targetType === 'exclusionGroupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
+                    isExcluded = true;
+                }
+            }
+
+            return isIncluded && !isExcluded;
+        }
+
+        // Get human-readable reason why policy applies
+        function getAssignmentReason(policy, deviceGroupIds, groupData) {
+            const assignments = policy.Assignments || [];
+            const reasons = [];
+
+            for (const assignment of assignments) {
+                const targetType = (assignment.TargetType || '').replace('#microsoft.graph.', '');
+                const groupId = assignment.GroupId;
+
+                if (targetType === 'allDevicesAssignmentTarget') {
+                    reasons.push('<span class="status-tag both-match">All Devices</span>');
+                } else if (targetType === 'allLicensedUsersAssignmentTarget') {
+                    reasons.push('<span class="status-tag migration-ready">All Users</span>');
+                } else if (targetType === 'groupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
+                    // Find group name
+                    const group = groupData?.Groups?.find(g => g.ObjectId === groupId);
+                    const groupName = group?.DisplayName || 'Group';
+                    reasons.push(`<span class="status-tag mdm-only" title="${escapeHtml(groupId)}">${escapeHtml(groupName)}</span>`);
+                }
+            }
+
+            return reasons.length > 0 ? reasons.join(' ') : '-';
+        }
+
+        function formatAssignmentTarget(targetType) {
+            if (!targetType) return 'Unknown';
+            // Clean up the OData type to human readable
+            const type = targetType.replace('#microsoft.graph.', '');
+            switch (type) {
+                case 'allDevicesAssignmentTarget': return 'All Devices';
+                case 'allLicensedUsersAssignmentTarget': return 'All Users';
+                case 'groupAssignmentTarget': return 'Group';
+                case 'exclusionGroupAssignmentTarget': return 'Exclude Group';
+                default: return type.replace(/AssignmentTarget$/, '').replace(/([A-Z])/g, ' $1').trim();
+            }
+        }
+
+        // Comparison rendering
+        function renderCompareView(device1, device2) {
+            const container = document.getElementById('compare-content');
+            const name1 = device1.device?.computerName || 'Device A';
+            const name2 = device2.device?.computerName || 'Device B';
+
+            // Compute diffs
+            const gpoDiff = computeGPODiff(device1, device2);
+            const mdmDiff = computeMDMDiff(device1, device2);
+
+            const gpo1Count = device1.gpoData?.RegistryPolicies?.length || 0;
+            const gpo2Count = device2.gpoData?.RegistryPolicies?.length || 0;
+            const mdm1Count = (device1.mdmData?.DevicePolicies?.length || 0) + (device1.mdmData?.UserPolicies?.length || 0);
+            const mdm2Count = (device2.mdmData?.DevicePolicies?.length || 0) + (device2.mdmData?.UserPolicies?.length || 0);
+
+            container.innerHTML = `
+                <div class="report-header">
+                    <h1>Device Comparison</h1>
+                    <div class="subtitle">${escapeHtml(name1)} vs ${escapeHtml(name2)}</div>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-dot red"></span> Unique to ${escapeHtml(name1)}</div>
+                    <div class="legend-item"><span class="legend-dot green"></span> Unique to ${escapeHtml(name2)}</div>
+                    <div class="legend-item" style="background: rgba(229, 192, 123, 0.15); padding: 5px 10px; border-radius: 4px;">Value Mismatch</div>
+                </div>
+
+                <div class="compare-grid">
+                    <div class="compare-column">
+                        <div class="compare-header">
+                            <strong>${escapeHtml(name1)}</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                ${gpo1Count} GPO, ${mdm1Count} MDM
+                            </div>
+                        </div>
                     </div>
-                ` : ''}
-            </div>
-        </div>
-    `;
-}
-
-// ============================================================================
-// COMPARISON VIEW RENDERING
-// ============================================================================
-function renderComparisonView(devices) {
-    if (!devices || devices.length < 2 || devices.length > 3) {
-        return '<div class="info-box warning">Please select 2 or 3 devices to compare.</div>';
-    }
-
-    const deviceNames = devices.map(d => d.device?.computerName || 'Unknown');
-    
-    const gpoComparison = compareGPOSettings(devices);
-    const intuneComparison = compareIntuneSettings(devices);
-    const sccmComparison = compareSCCMSettings(devices);
-    const azureADComparison = compareAzureADGroups(devices);
-    
-    const summary = {
-        gpo: gpoComparison.differences,
-        intune: intuneComparison.differences,
-        sccm: sccmComparison.differences,
-        azureAD: azureADComparison.differences,
-        total: gpoComparison.differences + intuneComparison.differences + 
-               sccmComparison.differences + azureADComparison.differences
-    };
-
-    return `
-        <div class="report-header">
-            <h1>Device Comparison</h1>
-            <div class="subtitle">${deviceNames.map(n => escapeHtml(n)).join(' vs ')}</div>
-        </div>
-        
-        <div class="summary-section">
-            <div class="summary-section-header">Comparison Summary - ${deviceNames.length} Devices</div>
-            <div class="summary-grid">
-                <div class="summary-card ${summary.total > 0 ? 'red' : 'green'}">
-                    <span class="number">${summary.total}</span>
-                    <span class="label">Total Differences</span>
+                    <div class="compare-column">
+                        <div class="compare-header">
+                            <strong>${escapeHtml(name2)}</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                ${gpo2Count} GPO, ${mdm2Count} MDM
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="summary-card ${summary.gpo > 0 ? 'yellow' : 'green'}">
-                    <span class="number">${summary.gpo}</span>
-                    <span class="label">GPO</span>
+
+                ${renderGPODiffSection(gpoDiff, name1, name2)}
+                ${renderMDMDiffSection(mdmDiff, name1, name2)}
+            `;
+
+            initCollapsibles();
+        }
+
+        function computeGPODiff(device1, device2) {
+            const settings1 = device1.gpoData?.RegistryPolicies || [];
+            const settings2 = device2.gpoData?.RegistryPolicies || [];
+
+            const keyFn = (s) => `${s.Path || ''}|${s.ValueName || ''}|${s.Scope || ''}`;
+
+            return computeDiff(settings1, settings2, keyFn, (s) => s.Data);
+        }
+
+        function computeMDMDiff(device1, device2) {
+            const policies1 = [...(device1.mdmData?.DevicePolicies || []), ...(device1.mdmData?.UserPolicies || [])];
+            const policies2 = [...(device2.mdmData?.DevicePolicies || []), ...(device2.mdmData?.UserPolicies || [])];
+
+            const keyFn = (p) => `${p.Area || ''}|${p.Setting || ''}|${p.Scope || ''}`;
+
+            return computeDiff(policies1, policies2, keyFn, (p) => p.Value);
+        }
+
+        function computeDiff(data1, data2, keyFn, valueFn) {
+            const map1 = new Map();
+            const map2 = new Map();
+
+            data1.forEach(item => map1.set(keyFn(item), { item, value: valueFn(item) }));
+            data2.forEach(item => map2.set(keyFn(item), { item, value: valueFn(item) }));
+
+            const result = {
+                identical: [],
+                valueMismatch: [],
+                uniqueToA: [],
+                uniqueToB: []
+            };
+
+            // Check items in data1
+            map1.forEach((entry1, key) => {
+                if (map2.has(key)) {
+                    const entry2 = map2.get(key);
+                    const val1 = JSON.stringify(entry1.value);
+                    const val2 = JSON.stringify(entry2.value);
+
+                    if (val1 === val2) {
+                        result.identical.push({ key, itemA: entry1.item, itemB: entry2.item });
+                    } else {
+                        result.valueMismatch.push({ key, itemA: entry1.item, itemB: entry2.item });
+                    }
+                } else {
+                    result.uniqueToA.push({ key, item: entry1.item });
+                }
+            });
+
+            // Check items only in data2
+            map2.forEach((entry2, key) => {
+                if (!map1.has(key)) {
+                    result.uniqueToB.push({ key, item: entry2.item });
+                }
+            });
+
+            return result;
+        }
+
+        function renderGPODiffSection(diff, name1, name2) {
+            const total = diff.identical.length + diff.valueMismatch.length + diff.uniqueToA.length + diff.uniqueToB.length;
+
+            if (total === 0) {
+                return `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>GPO Comparison</h2>
+                            <span class="toggle">&#9660;</span>
+                        </div>
+                        <div class="section-body">
+                            <p style="color: var(--text-secondary);">No GPO settings to compare.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>GPO Comparison (${diff.identical.length} identical, ${diff.valueMismatch.length} mismatched, ${diff.uniqueToA.length} unique to A, ${diff.uniqueToB.length} unique to B)</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="summary-grid">
+                            <div class="summary-card green">
+                                <span class="number">${diff.identical.length}</span>
+                                <span class="label">Identical</span>
+                            </div>
+                            <div class="summary-card yellow">
+                                <span class="number">${diff.valueMismatch.length}</span>
+                                <span class="label">Value Mismatch</span>
+                            </div>
+                            <div class="summary-card red">
+                                <span class="number">${diff.uniqueToA.length}</span>
+                                <span class="label">Only in ${escapeHtml(name1)}</span>
+                            </div>
+                            <div class="summary-card cyan">
+                                <span class="number">${diff.uniqueToB.length}</span>
+                                <span class="label">Only in ${escapeHtml(name2)}</span>
+                            </div>
+                        </div>
+                        <div class="filter-bar">
+                            <input type="text" id="gpo-diff-search" placeholder="Search GPO comparison..." oninput="filterTable('gpo-diff-table', 'gpo-diff-search')">
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="gpo-diff-table">
+                                <thead>
+                                    <tr>
+                                        <th>Path</th>
+                                        <th>Value Name</th>
+                                        <th>Value (${escapeHtml(name1)})</th>
+                                        <th>Value (${escapeHtml(name2)})</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${diff.valueMismatch.map(d => `
+                                        <tr class="diff-value-mismatch">
+                                            <td>${escapeHtml(d.itemA.Path || '')}</td>
+                                            <td>${escapeHtml(d.itemA.ValueName || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.itemA.Data))}</td>
+                                            <td>${escapeHtml(formatValue(d.itemB.Data))}</td>
+                                            <td><span class="status-tag conflict">Mismatch</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.uniqueToA.map(d => `
+                                        <tr class="diff-unique-a">
+                                            <td>${escapeHtml(d.item.Path || '')}</td>
+                                            <td>${escapeHtml(d.item.ValueName || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.item.Data))}</td>
+                                            <td>-</td>
+                                            <td><span class="status-tag no-mapping">Only A</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.uniqueToB.map(d => `
+                                        <tr class="diff-unique-b">
+                                            <td>${escapeHtml(d.item.Path || '')}</td>
+                                            <td>${escapeHtml(d.item.ValueName || '')}</td>
+                                            <td>-</td>
+                                            <td>${escapeHtml(formatValue(d.item.Data))}</td>
+                                            <td><span class="status-tag migration-ready">Only B</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.identical.map(d => `
+                                        <tr class="diff-identical">
+                                            <td>${escapeHtml(d.itemA.Path || '')}</td>
+                                            <td>${escapeHtml(d.itemA.ValueName || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.itemA.Data))}</td>
+                                            <td>${escapeHtml(formatValue(d.itemB.Data))}</td>
+                                            <td><span class="status-tag both-match">Identical</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div class="summary-card ${summary.intune > 0 ? 'yellow' : 'green'}">
-                    <span class="number">${summary.intune}</span>
-                    <span class="label">Intune</span>
+            `;
+        }
+
+        function renderMDMDiffSection(diff, name1, name2) {
+            const total = diff.identical.length + diff.valueMismatch.length + diff.uniqueToA.length + diff.uniqueToB.length;
+
+            if (total === 0) {
+                return `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>MDM Comparison</h2>
+                            <span class="toggle">&#9660;</span>
+                        </div>
+                        <div class="section-body">
+                            <p style="color: var(--text-secondary);">No MDM policies to compare.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h2>MDM Comparison (${diff.identical.length} identical, ${diff.valueMismatch.length} mismatched, ${diff.uniqueToA.length} unique to A, ${diff.uniqueToB.length} unique to B)</h2>
+                        <span class="toggle">&#9660;</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="summary-grid">
+                            <div class="summary-card green">
+                                <span class="number">${diff.identical.length}</span>
+                                <span class="label">Identical</span>
+                            </div>
+                            <div class="summary-card yellow">
+                                <span class="number">${diff.valueMismatch.length}</span>
+                                <span class="label">Value Mismatch</span>
+                            </div>
+                            <div class="summary-card red">
+                                <span class="number">${diff.uniqueToA.length}</span>
+                                <span class="label">Only in ${escapeHtml(name1)}</span>
+                            </div>
+                            <div class="summary-card cyan">
+                                <span class="number">${diff.uniqueToB.length}</span>
+                                <span class="label">Only in ${escapeHtml(name2)}</span>
+                            </div>
+                        </div>
+                        <div class="filter-bar">
+                            <input type="text" id="mdm-diff-search" placeholder="Search MDM comparison..." oninput="filterTable('mdm-diff-table', 'mdm-diff-search')">
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="mdm-diff-table">
+                                <thead>
+                                    <tr>
+                                        <th>Area</th>
+                                        <th>Setting</th>
+                                        <th>Value (${escapeHtml(name1)})</th>
+                                        <th>Value (${escapeHtml(name2)})</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${diff.valueMismatch.map(d => `
+                                        <tr class="diff-value-mismatch">
+                                            <td>${escapeHtml(d.itemA.Area || '')}</td>
+                                            <td>${escapeHtml(d.itemA.Setting || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.itemA.Value))}</td>
+                                            <td>${escapeHtml(formatValue(d.itemB.Value))}</td>
+                                            <td><span class="status-tag conflict">Mismatch</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.uniqueToA.map(d => `
+                                        <tr class="diff-unique-a">
+                                            <td>${escapeHtml(d.item.Area || '')}</td>
+                                            <td>${escapeHtml(d.item.Setting || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.item.Value))}</td>
+                                            <td>-</td>
+                                            <td><span class="status-tag no-mapping">Only A</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.uniqueToB.map(d => `
+                                        <tr class="diff-unique-b">
+                                            <td>${escapeHtml(d.item.Area || '')}</td>
+                                            <td>${escapeHtml(d.item.Setting || '')}</td>
+                                            <td>-</td>
+                                            <td>${escapeHtml(formatValue(d.item.Value))}</td>
+                                            <td><span class="status-tag migration-ready">Only B</span></td>
+                                        </tr>
+                                    `).join('')}
+                                    ${diff.identical.map(d => `
+                                        <tr class="diff-identical">
+                                            <td>${escapeHtml(d.itemA.Area || '')}</td>
+                                            <td>${escapeHtml(d.itemA.Setting || '')}</td>
+                                            <td>${escapeHtml(formatValue(d.itemA.Value))}</td>
+                                            <td>${escapeHtml(formatValue(d.itemB.Value))}</td>
+                                            <td><span class="status-tag both-match">Identical</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div class="summary-card ${summary.sccm > 0 ? 'yellow' : 'green'}">
-                    <span class="number">${summary.sccm}</span>
-                    <span class="label">SCCM</span>
-                </div>
-                <div class="summary-card ${summary.azureAD > 0 ? 'yellow' : 'green'}">
-                    <span class="number">${summary.azureAD}</span>
-                    <span class="label">Azure AD</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="filter-bar" style="margin-bottom: var(--space-lg);">
-            <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
-                <input type="checkbox" id="hide-identical-rows" onchange="toggleIdenticalRows(this.checked)">
-                <span>Show differences only</span>
-            </label>
-        </div>
-        
-        ${renderGPOComparisonSection(gpoComparison, deviceNames)}
-        ${renderIntuneComparisonSection(intuneComparison, deviceNames)}
-        ${renderSCCMComparisonSection(sccmComparison, deviceNames)}
-        ${renderAzureADComparisonSection(azureADComparison, deviceNames)}
-    `;
-}
+            `;
+        }
 
-function toggleIdenticalRows(hide) {
-    document.querySelectorAll('.comparison-row.row-identical').forEach(row => {
-        row.style.display = hide ? 'none' : '';
-    });
-}
+        // Filtering
+        function filterTable(tableId, searchId) {
+            const searchValue = document.getElementById(searchId).value.toLowerCase();
+            const table = document.getElementById(tableId);
+            const rows = table.querySelectorAll('tbody tr');
 
-// GPO Comparison
-function compareGPOSettings(devices) {
-    const gpoObjects = compareGPOObjects(devices);
-    const registrySettings = compareRegistrySettings(devices);
-    return {
-        gpoObjects,
-        registrySettings,
-        differences: gpoObjects.filter(r => r.hasDifference).length + registrySettings.filter(r => r.hasDifference).length
-    };
-}
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchValue) ? '' : 'none';
+            });
+        }
 
-function compareGPOObjects(devices) {
-    const allGPOs = new Map();
-    devices.forEach((device, idx) => {
-        (device.gpoData?.AppliedGPOs || []).forEach(gpo => {
-            const key = gpo.Name || gpo.DisplayName || 'Unknown';
-            if (!allGPOs.has(key)) allGPOs.set(key, { name: key, devices: new Array(devices.length).fill(null) });
-            allGPOs.get(key).devices[idx] = gpo;
-        });
-    });
-    
-    return Array.from(allGPOs.values()).map(entry => ({
-        name: entry.name,
-        cells: entry.devices.map(d => d ? { applied: true, value: '✓' } : { applied: false, value: '✗' }),
-        hasDifference: entry.devices.filter(d => d !== null).length > 0 && entry.devices.filter(d => d !== null).length < devices.length
-    })).sort((a, b) => b.hasDifference - a.hasDifference || a.name.localeCompare(b.name));
-}
+        function filterOverlapTable() {
+            const searchValue = document.getElementById('overlap-search').value.toLowerCase();
+            const statusFilter = document.getElementById('overlap-status-filter').value;
+            const table = document.getElementById('overlap-table');
+            const rows = table.querySelectorAll('tbody tr');
 
-function compareRegistrySettings(devices) {
-    const allSettings = new Map();
-    devices.forEach((device, idx) => {
-        (device.gpoData?.RegistryPolicies || []).forEach(s => {
-            const key = `${s.Path || ''}|${s.ValueName || ''}`;
-            if (!allSettings.has(key)) allSettings.set(key, { path: s.Path || '', valueName: s.ValueName || '', devices: new Array(devices.length).fill(null) });
-            allSettings.get(key).devices[idx] = s;
-        });
-    });
-    
-    return Array.from(allSettings.values()).map(entry => {
-        const values = entry.devices.map(d => d ? formatValue(d.Data) : null);
-        const nonNull = values.filter(v => v !== null);
-        const unique = [...new Set(nonNull)];
-        return {
-            path: entry.path,
-            valueName: entry.valueName,
-            cells: entry.devices.map(d => ({ applied: d !== null, value: d ? formatValue(d.Data) : '✗' })),
-            hasDifference: nonNull.length !== devices.length || unique.length > 1
-        };
-    }).sort((a, b) => b.hasDifference - a.hasDifference);
-}
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const status = row.dataset.status;
+                const matchesSearch = text.includes(searchValue);
+                const matchesStatus = !statusFilter || status === statusFilter;
+                row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+            });
+        }
 
-function renderGPOComparisonSection(comparison, deviceNames) {
-    const total = comparison.gpoObjects.length + comparison.registrySettings.length;
-    return `
-        <div class="section">
-            <div class="section-header">
-                <h2>📋 GPO Comparison (${comparison.differences} differences of ${total})</h2>
-                <span class="toggle">▼</span>
-            </div>
-            <div class="section-body">
-                ${comparison.gpoObjects.length > 0 ? `
-                    <h3 style="margin-bottom: var(--space-sm); color: var(--text-secondary);">Applied GPOs</h3>
-                    ${renderComparisonTable(['GPO Name', ...deviceNames], comparison.gpoObjects.map(r => ({
-                        cells: [r.name, ...r.cells.map(c => c.value)],
-                        hasDifference: r.hasDifference,
-                        cellClasses: ['', ...r.cells.map(c => c.applied ? 'cell-applied' : 'cell-not-applied')]
-                    })))}
-                ` : ''}
-                <h3 style="margin: var(--space-lg) 0 var(--space-sm); color: var(--text-secondary);">Registry Settings</h3>
-                ${comparison.registrySettings.length > 0 ? renderComparisonTable(['Path', 'Value Name', ...deviceNames], comparison.registrySettings.map(r => ({
-                    cells: [r.path, r.valueName, ...r.cells.map(c => c.value)],
-                    hasDifference: r.hasDifference,
-                    cellClasses: ['path-cell', '', ...r.cells.map(c => c.applied ? 'cell-applied' : 'cell-not-applied')]
-                }))) : '<p style="color: var(--text-muted);">No registry settings.</p>'}
-            </div>
-        </div>
-    `;
-}
+        // Collapsible sections
+        function initCollapsibles() {
+            document.querySelectorAll('.section-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    this.classList.toggle('collapsed');
+                    const body = this.nextElementSibling;
+                    body.classList.toggle('hidden');
+                });
+            });
+        }
 
-// Intune Comparison
-function compareIntuneSettings(devices) {
-    const mdmPolicies = compareMDMPolicies(devices);
-    return { mdmPolicies, differences: mdmPolicies.filter(r => r.hasDifference).length };
-}
+        // Helpers
+        function formatValue(val) {
+            if (val === null || val === undefined) return '-';
+            if (typeof val === 'object') return JSON.stringify(val);
+            return String(val);
+        }
 
-function compareMDMPolicies(devices) {
-    const allPolicies = new Map();
-    devices.forEach((device, idx) => {
-        [...(device.mdmData?.DevicePolicies || []), ...(device.mdmData?.UserPolicies || [])].forEach(p => {
-            const key = `${p.Area || ''}|${p.Setting || ''}`;
-            if (!allPolicies.has(key)) allPolicies.set(key, { area: p.Area || '', setting: p.Setting || '', devices: new Array(devices.length).fill(null) });
-            allPolicies.get(key).devices[idx] = p;
-        });
-    });
-    
-    return Array.from(allPolicies.values()).map(entry => {
-        const values = entry.devices.map(d => d ? formatValue(d.Value) : null);
-        const nonNull = values.filter(v => v !== null);
-        const unique = [...new Set(nonNull)];
-        return {
-            area: entry.area,
-            setting: entry.setting,
-            cells: entry.devices.map(d => ({ applied: d !== null, value: d ? formatValue(d.Value) : '✗' })),
-            hasDifference: nonNull.length !== devices.length || unique.length > 1
-        };
-    }).sort((a, b) => b.hasDifference - a.hasDifference);
-}
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = String(str);
+            return div.innerHTML;
+        }
 
-function renderIntuneComparisonSection(comparison, deviceNames) {
-    return `
-        <div class="section">
-            <div class="section-header">
-                <h2>☁️ Intune/MDM Comparison (${comparison.differences} differences of ${comparison.mdmPolicies.length})</h2>
-                <span class="toggle">▼</span>
-            </div>
-            <div class="section-body">
-                ${comparison.mdmPolicies.length > 0 ? renderComparisonTable(['Area', 'Setting', ...deviceNames], comparison.mdmPolicies.map(r => ({
-                    cells: [r.area, r.setting, ...r.cells.map(c => c.value)],
-                    hasDifference: r.hasDifference,
-                    cellClasses: ['', '', ...r.cells.map(c => c.applied ? 'cell-applied' : 'cell-not-applied')]
-                }))) : '<p style="color: var(--text-muted);">No MDM policies found.</p>'}
-            </div>
-        </div>
-    `;
-}
-
-// SCCM Comparison
-function compareSCCMSettings(devices) {
-    const apps = compareSCCMApps(devices);
-    return { apps, differences: apps.filter(r => r.hasDifference).length };
-}
-
-function compareSCCMApps(devices) {
-    const allApps = new Map();
-    devices.forEach((device, idx) => {
-        (device.sccmData?.Applications || []).forEach(a => {
-            const key = a.Name || 'Unknown';
-            if (!allApps.has(key)) allApps.set(key, { name: key, devices: new Array(devices.length).fill(null) });
-            allApps.get(key).devices[idx] = a;
-        });
-    });
-    
-    return Array.from(allApps.values()).map(entry => ({
-        name: entry.name,
-        cells: entry.devices.map(d => d ? { applied: true, value: d.InstallState || '✓' } : { applied: false, value: '✗' }),
-        hasDifference: entry.devices.filter(d => d !== null).length !== devices.length
-    })).sort((a, b) => b.hasDifference - a.hasDifference);
-}
-
-function renderSCCMComparisonSection(comparison, deviceNames) {
-    return `
-        <div class="section">
-            <div class="section-header ${comparison.apps.length === 0 ? 'collapsed' : ''}">
-                <h2>🖥️ SCCM Comparison (${comparison.differences} differences of ${comparison.apps.length})</h2>
-                <span class="toggle">▼</span>
-            </div>
-            <div class="section-body ${comparison.apps.length === 0 ? 'hidden' : ''}">
-                ${comparison.apps.length > 0 ? renderComparisonTable(['Application', ...deviceNames], comparison.apps.map(r => ({
-                    cells: [r.name, ...r.cells.map(c => c.value)],
-                    hasDifference: r.hasDifference,
-                    cellClasses: ['', ...r.cells.map(c => c.applied ? (c.value === 'Installed' ? 'cell-installed' : 'cell-applied') : 'cell-not-applied')]
-                }))) : '<p style="color: var(--text-muted);">No SCCM data.</p>'}
-            </div>
-        </div>
-    `;
-}
-
-// Azure AD Comparison
-function compareAzureADGroups(devices) {
-    const allGroups = new Map();
-    devices.forEach((device, idx) => {
-        (device.groupData?.Groups || []).forEach(g => {
-            const key = g.ObjectId || g.DisplayName;
-            if (!allGroups.has(key)) allGroups.set(key, { name: g.DisplayName || 'Unknown', type: g.GroupType || 'Assigned', devices: new Array(devices.length).fill(false) });
-            allGroups.get(key).devices[idx] = true;
-        });
-    });
-    
-    const groups = Array.from(allGroups.values()).map(entry => ({
-        name: entry.name,
-        type: entry.type,
-        cells: entry.devices.map(d => ({ applied: d, value: d ? '✓' : '✗' })),
-        hasDifference: entry.devices.filter(d => d).length > 0 && entry.devices.filter(d => d).length < devices.length
-    })).sort((a, b) => b.hasDifference - a.hasDifference);
-    
-    return { groups, differences: groups.filter(r => r.hasDifference).length };
-}
-
-function renderAzureADComparisonSection(comparison, deviceNames) {
-    return `
-        <div class="section">
-            <div class="section-header ${comparison.groups.length === 0 ? 'collapsed' : ''}">
-                <h2>🔐 Azure AD Groups (${comparison.differences} differences of ${comparison.groups.length})</h2>
-                <span class="toggle">▼</span>
-            </div>
-            <div class="section-body ${comparison.groups.length === 0 ? 'hidden' : ''}">
-                ${comparison.groups.length > 0 ? renderComparisonTable(['Group Name', 'Type', ...deviceNames], comparison.groups.map(r => ({
-                    cells: [r.name, r.type, ...r.cells.map(c => c.value)],
-                    hasDifference: r.hasDifference,
-                    cellClasses: ['', r.type === 'Dynamic' ? 'cell-dynamic' : 'cell-assigned', ...r.cells.map(c => c.applied ? 'cell-member' : 'cell-not-member')]
-                }))) : '<p style="color: var(--text-muted);">No Azure AD groups.</p>'}
-            </div>
-        </div>
-    `;
-}
-
-// Comparison Table Renderer
-function renderComparisonTable(headers, rows) {
-    if (rows.length === 0) return '<p style="color: var(--text-muted);">No items.</p>';
-    return `
-        <div class="table-wrapper">
-            <table class="comparison-table">
-                <thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
-                <tbody>
-                    ${rows.map(row => `
-                        <tr class="comparison-row ${row.hasDifference ? 'row-different' : 'row-identical'}">
-                            ${row.cells.map((cell, i) => `<td class="${row.cellClasses?.[i] || ''}">${escapeHtml(cell)}</td>`).join('')}
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-}
-
-function filterComparisonTable(tableId, searchText) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    const search = searchText.toLowerCase();
-    const hideIdentical = document.getElementById('hide-identical-rows')?.checked;
-    table.querySelectorAll('tbody tr').forEach(row => {
-        const matchesSearch = row.textContent.toLowerCase().includes(search);
-        const isIdentical = row.classList.contains('row-identical');
-        row.style.display = matchesSearch && !(isIdentical && hideIdentical) ? '' : 'none';
-    });
-}
+        function formatDate(isoString) {
+            if (!isoString) return '';
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleString();
+            } catch {
+                return isoString;
+            }
+        }
     </script>
 </body>
 </html>
