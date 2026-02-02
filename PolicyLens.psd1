@@ -12,6 +12,7 @@
         'Get-GraphPolicyData'
         'Get-DeviceAppAssignments'
         'Get-DeviceGroupMemberships'
+        'Get-SettingsCatalogMappings'
         'Compare-PolicyOverlap'
         'Get-SCCMPolicyData'
     )

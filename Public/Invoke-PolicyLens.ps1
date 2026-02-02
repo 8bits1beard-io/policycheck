@@ -57,10 +57,18 @@ function Invoke-PolicyLens {
 
         [switch]$SkipMDMDiag,
 
+        [switch]$SuggestMappings,
+
         [string]$OutputPath,
 
         [string]$LogPath = "$env:LOCALAPPDATA\PolicyLens\PolicyLens.log"
     )
+
+    # Validate parameters
+    if ($SuggestMappings -and -not $IncludeGraph) {
+        Write-Error "-SuggestMappings requires -IncludeGraph to query Settings Catalog via Graph API"
+        return
+    }
 
     # Determine target name for output path default
     $targetName = if ($ComputerName) { $ComputerName } else { $env:COMPUTERNAME }
@@ -80,8 +88,10 @@ function Invoke-PolicyLens {
 
     # Calculate total steps for progress tracking
     $totalSteps = if ($IncludeGraph) { 5 } else { 4 }
+    if ($SuggestMappings) { $totalSteps++ }  # Add mapping suggestions step
     if ($isRemoteScan) {
         $totalSteps = if ($IncludeGraph) { 4 } else { 3 }
+        if ($SuggestMappings) { $totalSteps++ }
     }
     $currentStep = 0
 
@@ -438,6 +448,70 @@ function Invoke-PolicyLens {
         }
         Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
 
+        # --- Mapping Suggestions (Optional) ---
+        $mappingSuggestions = $null
+        if ($SuggestMappings) {
+            Write-Host ""
+            $currentStep++
+            Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
+            Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+            Write-Host "MAPPING SUGGESTIONS" -ForegroundColor Cyan -NoNewline
+            Write-Host " ────────────┐" -ForegroundColor DarkGray
+            Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+            Write-Host "► " -ForegroundColor Yellow -NoNewline
+            Write-Host "Finding Settings Catalog matches..." -ForegroundColor White
+            Write-PolicyLensLog "Mapping Suggestions: Started (remote scan)" -Level Info
+
+            try {
+                $catalogSettings = Get-SettingsCatalogMappings -GraphConnected
+                if ($catalogSettings) {
+                    $mapPath = Join-Path $PSScriptRoot '..\Config\SettingsMap.psd1'
+                    $existingMappings = @{}
+                    if (Test-Path $mapPath) {
+                        $existingMappings = Import-PowerShellDataFile $mapPath
+                    }
+
+                    $unmappedSettings = $analysis.DetailedResults | Where-Object { $_.Status -eq 'GPOOnly_NoMapping' }
+                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "Processing " -ForegroundColor Gray -NoNewline
+                    Write-Host "$($unmappedSettings.Count)" -ForegroundColor Cyan -NoNewline
+                    Write-Host " unmapped settings" -ForegroundColor Gray
+
+                    $mappingSuggestions = @()
+                    foreach ($gpoSetting in $unmappedSettings) {
+                        $matches = Find-SettingsCatalogMatch -GPOSetting $gpoSetting -CatalogSettings $catalogSettings -ExistingMappings $existingMappings
+                        if ($matches) {
+                            $mappingSuggestions += [PSCustomObject]@{
+                                GPOPath = $gpoSetting.GPOPath
+                                GPOValueName = $gpoSetting.GPOValueName
+                                GPOCategory = $gpoSetting.Category
+                                Matches = $matches
+                            }
+                        }
+                    }
+
+                    $highCount = ($mappingSuggestions.Matches | Where-Object { $_.Confidence -eq 'High' }).Count
+                    $medCount = ($mappingSuggestions.Matches | Where-Object { $_.Confidence -eq 'Medium' }).Count
+
+                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "✓ " -ForegroundColor Green -NoNewline
+                    Write-Host "Suggestions: " -ForegroundColor Gray -NoNewline
+                    Write-Host "$highCount" -ForegroundColor Green -NoNewline
+                    Write-Host " high, " -ForegroundColor Gray -NoNewline
+                    Write-Host "$medCount" -ForegroundColor Yellow -NoNewline
+                    Write-Host " medium" -ForegroundColor Gray
+                    Write-PolicyLensLog "Mapping Suggestions: Complete ($($mappingSuggestions.Count) with suggestions)" -Level Info
+                }
+            }
+            catch {
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "✗ " -ForegroundColor Red -NoNewline
+                Write-Host "Failed: $_" -ForegroundColor Red
+                Write-PolicyLensLog "Mapping Suggestions: Failed - $_" -Level Error
+            }
+            Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
+        }
+
         # --- Output summary ---
         Write-ConsoleSummary -Analysis $analysis -GPOData $gpoData -MDMData $mdmData `
             -AppData $appData -GroupData $groupData
@@ -451,6 +525,7 @@ function Invoke-PolicyLens {
             AppData   = $appData
             GroupData = $groupData
             Analysis  = $analysis
+            MappingSuggestions = $mappingSuggestions
         }
 
         # Export to JSON with device metadata from remote
@@ -783,6 +858,90 @@ function Invoke-PolicyLens {
     }
     Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
 
+    # --- Phase 6 (Optional): Suggest mappings for unmapped GPO settings ---
+    $mappingSuggestions = $null
+    if ($SuggestMappings) {
+        Write-Host ""
+        $currentStep++
+        Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
+        Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+        Write-Host "MAPPING SUGGESTIONS" -ForegroundColor Cyan -NoNewline
+        Write-Host " ────────────┐" -ForegroundColor DarkGray
+        Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "► " -ForegroundColor Yellow -NoNewline
+        Write-Host "Finding Settings Catalog matches for unmapped GPO settings..." -ForegroundColor White
+        Write-PolicyLensLog "Mapping Suggestions: Started" -Level Info
+
+        try {
+            # Get Settings Catalog definitions
+            $catalogSettings = Get-SettingsCatalogMappings -GraphConnected
+
+            if ($catalogSettings) {
+                # Load existing mappings from SettingsMap.psd1
+                $mapPath = Join-Path $PSScriptRoot '..\Config\SettingsMap.psd1'
+                $existingMappings = @{}
+                if (Test-Path $mapPath) {
+                    $existingMappings = Import-PowerShellDataFile $mapPath
+                }
+
+                # Find unmapped GPO settings (Status = 'GPOOnly_NoMapping')
+                $unmappedSettings = $analysis.DetailedResults | Where-Object { $_.Status -eq 'GPOOnly_NoMapping' }
+
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "Found " -ForegroundColor Gray -NoNewline
+                Write-Host "$($unmappedSettings.Count)" -ForegroundColor Cyan -NoNewline
+                Write-Host " unmapped GPO settings" -ForegroundColor Gray
+
+                # Find matches for each unmapped setting
+                $mappingSuggestions = @()
+                $processed = 0
+                foreach ($gpoSetting in $unmappedSettings) {
+                    $processed++
+                    if ($processed % 50 -eq 0) {
+                        Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                        Write-Host "Processing: $processed / $($unmappedSettings.Count)" -ForegroundColor Gray
+                    }
+
+                    $matches = Find-SettingsCatalogMatch -GPOSetting $gpoSetting -CatalogSettings $catalogSettings -ExistingMappings $existingMappings
+
+                    if ($matches) {
+                        $mappingSuggestions += [PSCustomObject]@{
+                            GPOPath = $gpoSetting.GPOPath
+                            GPOValueName = $gpoSetting.GPOValueName
+                            GPOCategory = $gpoSetting.Category
+                            Matches = $matches
+                        }
+                    }
+                }
+
+                $highConfidenceCount = ($mappingSuggestions.Matches | Where-Object { $_.Confidence -eq 'High' }).Count
+                $mediumConfidenceCount = ($mappingSuggestions.Matches | Where-Object { $_.Confidence -eq 'Medium' }).Count
+
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "✓ " -ForegroundColor Green -NoNewline
+                Write-Host "Found suggestions: " -ForegroundColor Gray -NoNewline
+                Write-Host "$highConfidenceCount" -ForegroundColor Green -NoNewline
+                Write-Host " high, " -ForegroundColor Gray -NoNewline
+                Write-Host "$mediumConfidenceCount" -ForegroundColor Yellow -NoNewline
+                Write-Host " medium confidence" -ForegroundColor Gray
+                Write-PolicyLensLog "Mapping Suggestions: Complete ($($mappingSuggestions.Count) settings with suggestions)" -Level Info
+            }
+            else {
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "✗ " -ForegroundColor Red -NoNewline
+                Write-Host "Could not retrieve Settings Catalog" -ForegroundColor Red
+                Write-PolicyLensLog "Mapping Suggestions: Failed to retrieve catalog" -Level Error
+            }
+        }
+        catch {
+            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+            Write-Host "✗ " -ForegroundColor Red -NoNewline
+            Write-Host "Mapping suggestions failed: $_" -ForegroundColor Red
+            Write-PolicyLensLog "Mapping Suggestions: Failed - $_" -Level Error
+        }
+        Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
+    }
+
     # --- Output summary ---
     Write-ConsoleSummary -Analysis $analysis -GPOData $gpoData -MDMData $mdmData `
         -AppData $appData -GroupData $groupData
@@ -796,6 +955,7 @@ function Invoke-PolicyLens {
         AppData   = $appData
         GroupData = $groupData
         Analysis  = $analysis
+        MappingSuggestions = $mappingSuggestions
     }
 
     # Export to JSON

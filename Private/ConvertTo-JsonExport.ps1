@@ -120,6 +120,7 @@ function ConvertTo-JsonExport {
             appData       = if ($Result.PSObject.Properties['AppData']) { $Result.AppData } else { $null }
             groupData     = if ($Result.PSObject.Properties['GroupData']) { $Result.GroupData } else { $null }
             analysis      = if ($Result.PSObject.Properties['Analysis']) { $Result.Analysis } else { $null }
+            mappingSuggestions = if ($Result.PSObject.Properties['MappingSuggestions']) { $Result.MappingSuggestions } else { $null }
         }
 
         Write-Verbose "Converting to JSON with depth 15..."
