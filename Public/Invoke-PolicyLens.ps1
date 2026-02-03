@@ -97,7 +97,7 @@ function Invoke-PolicyLens {
 
     # --- Start logging ---
     Write-PolicyLensLog "========================================" -Level Info
-    Write-PolicyLensLog "PolicyLens started (v1.0.0)" -Level Info
+    Write-PolicyLensLog "PolicyLens started (v1.1.0)" -Level Info
     $logParams = "IncludeGraph=$IncludeGraph, SkipMDMDiag=$SkipMDMDiag"
     if ($isRemoteScan) { $logParams += ", ComputerName=$ComputerName" }
     Write-PolicyLensLog "Parameters: $logParams" -Level Info
@@ -105,7 +105,7 @@ function Invoke-PolicyLens {
     Write-Host ""
     Write-Host "  ┌──────────────────────────────────────────┐" -ForegroundColor Cyan
     Write-Host "  │  " -ForegroundColor Cyan -NoNewline
-    Write-Host "PolicyLens v1.0.0" -ForegroundColor White -NoNewline
+    Write-Host "PolicyLens v1.1.0" -ForegroundColor White -NoNewline
     Write-Host "                       │" -ForegroundColor Cyan
     Write-Host "  │  " -ForegroundColor Cyan -NoNewline
     Write-Host "GPO • Intune • SCCM Policy Scanner" -ForegroundColor DarkCyan -NoNewline
@@ -245,14 +245,15 @@ function Invoke-PolicyLens {
             Write-Host "$gpoCount" -ForegroundColor Cyan -NoNewline
             Write-Host " registry policies" -ForegroundColor Gray
 
-            $mdmTotal = @($mdmData.DevicePolicies).Count + @($mdmData.UserPolicies).Count
+            $intuneCount = $mdmData.IntunePolicyCount
+            $totalCSP = @($mdmData.DevicePolicies).Count + @($mdmData.UserPolicies).Count
             Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
             Write-Host "  MDM: " -ForegroundColor Gray -NoNewline
             if ($mdmData.IsEnrolled) {
                 Write-Host "Enrolled" -ForegroundColor Green -NoNewline
                 Write-Host " • " -ForegroundColor Gray -NoNewline
-                Write-Host "$mdmTotal" -ForegroundColor Cyan -NoNewline
-                Write-Host " policies" -ForegroundColor Gray
+                Write-Host "$intuneCount" -ForegroundColor Cyan -NoNewline
+                Write-Host " Intune policies" -ForegroundColor Gray
             }
             else {
                 Write-Host "Not enrolled" -ForegroundColor Yellow
@@ -634,14 +635,15 @@ function Invoke-PolicyLens {
     Write-PolicyLensLog "Phase 2: MDM collection started" -Level Info
     try {
         $mdmData = Get-MDMPolicyData -SkipMDMDiag:$SkipMDMDiag
-        $mdmTotal = $mdmData.DevicePolicies.Count + $mdmData.UserPolicies.Count
+        $intuneCount = $mdmData.IntunePolicyCount
+        $totalCSP = $mdmData.TotalCSPValueCount
         if ($mdmData.IsEnrolled) {
             Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
             Write-Host "✓ " -ForegroundColor Green -NoNewline
             Write-Host "Device enrolled • " -ForegroundColor Green -NoNewline
-            Write-Host "$mdmTotal" -ForegroundColor Green -NoNewline
-            Write-Host " MDM policies retrieved" -ForegroundColor Gray
-            Write-PolicyLensLog "Phase 2: MDM collection complete (enrolled, $mdmTotal policies)" -Level Info
+            Write-Host "$intuneCount" -ForegroundColor Green -NoNewline
+            Write-Host " Intune policies ($totalCSP total CSP values)" -ForegroundColor Gray
+            Write-PolicyLensLog "Phase 2: MDM collection complete (enrolled, $intuneCount Intune policies)" -Level Info
         }
         else {
             Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
