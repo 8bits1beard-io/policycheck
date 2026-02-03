@@ -79,7 +79,10 @@ Install-Module Microsoft.Graph -Scope CurrentUser
 
 | Parameter | Description |
 |-----------|-------------|
+| `-ComputerName` | Remote computer to scan via WinRM (default: local machine) |
+| `-Credential` | PSCredential for remote authentication |
 | `-IncludeGraph` | Connect to Microsoft Graph API for Intune data and Azure AD group memberships |
+| `-SuggestMappings` | Find Settings Catalog matches for unmapped GPO settings (requires `-IncludeGraph`) |
 | `-TenantId` | Azure AD tenant ID or domain for Graph authentication |
 | `-SkipMDMDiag` | Skip mdmdiagnosticstool execution (faster scans) |
 | `-OutputPath` | Custom path for JSON export file |
@@ -87,7 +90,7 @@ Install-Module Microsoft.Graph -Scope CurrentUser
 
 ## Web Viewer
 
-The `Tools/PolicyLensViewer.html` file provides an interactive interface for analyzing JSON exports:
+The `Viewer/PolicyLensViewer.html` file provides an interactive interface for analyzing JSON exports:
 
 1. Open `PolicyLensViewer.html` in any modern browser (no server required)
 2. Drag and drop one or more JSON export files

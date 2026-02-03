@@ -1,0 +1,20 @@
+# PolicyLens scan outputs (generated at runtime)
+PolicyLens_*.json
+
+# PowerShell logs
+*.log
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# PowerShell module cache
+*.psm1.bak
