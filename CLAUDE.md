@@ -53,7 +53,7 @@ PolicyLens/
 **Public Functions** (exported, in `Public/`):
 - `Invoke-PolicyLens` - Main orchestrator that runs all phases and exports JSON
 - `Get-GPOPolicyData` - Collects GPO data via gpresult and registry scanning
-- `Get-MDMPolicyData` - Reads MDM enrollment and PolicyManager registry keys
+- `Get-MDMPolicyData` - Reads MDM enrollment and Intune policies from Providers path (separates IntunePolicies from all CSP values)
 - `Get-SCCMPolicyData` - Collects SCCM client data via WMI
 - `Get-GraphPolicyData` - Fetches Intune profiles via Microsoft Graph
 - `Get-DeviceAppAssignments` - Gets Intune app assignments via Graph
@@ -67,6 +67,8 @@ PolicyLens/
 - `Write-PolicyLensLog` - Writes operational log entries
 - `Find-SettingsCatalogMatch` - Matches GPO settings to Settings Catalog items
 - `Get-RemoteCollectionScriptBlock` - Generates script block for WinRM remote scans
+- `Get-RSoPPolicySource` - Queries RSoP WMI to map registry settings to source GPOs
+- `Merge-PolicyData` - Normalizes and deduplicates policy data from multiple sources
 
 **Data Flow:**
 1. `Invoke-PolicyLens` calls data collection functions (GPO, MDM, SCCM, optionally Graph)

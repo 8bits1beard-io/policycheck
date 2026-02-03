@@ -38,12 +38,15 @@ This document provides detailed technical information for developers, contributo
 **Sources:**
 - `gpresult /scope:computer /x` - XML export of applied GPOs
 - Registry scanning under `HKLM:\SOFTWARE\Policies` and `HKCU:\SOFTWARE\Policies`
+- RSoP WMI (`root\rsop\computer` and `root\rsop\user`) - Source GPO attribution
 
 **Process:**
 1. Runs `gpresult` to get list of applied GPOs with metadata
-2. Scans policy registry keys recursively
-3. Categorizes settings by registry path patterns
-4. Returns structured object with GPO list and registry policies
+2. Calls `Get-RSoPPolicySource` to build a lookup table mapping registry settings to source GPOs
+3. Scans policy registry keys recursively
+4. Correlates each registry setting with its source GPO using the RSoP lookup
+5. Categorizes settings by registry path patterns
+6. Returns structured object with GPO list and registry policies
 
 **Output structure:**
 ```powershell
@@ -53,41 +56,128 @@ This document provides detailed technical information for developers, contributo
     UserGPOs         = @(...)  # GPO names/GUIDs applied to user
     RegistryPolicies = @(
         @{
-            Path      = "HKLM:\SOFTWARE\Policies\..."
+            Path      = "Microsoft\Windows\..."  # Relative path
             ValueName = "SettingName"
             Data      = "Value"
-            Type      = "REG_DWORD"
-            Scope     = "Machine|User"
+            DataType  = "String|Int32|..."
+            Scope     = "Computer|User"
             Category  = "Detected category"
+            FullPath  = "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\..."
+            SourceGPO = "GPO Display Name"  # From RSoP WMI
+            SourceOU  = "OU=...,DC=..."      # Scope of Management ID
         }
     )
+    CollectedAt      = [datetime]
+    ComputerName     = "HOSTNAME"
 }
 ```
 
 ### MDM/Intune (Get-MDMPolicyData)
 
 **Sources:**
-- `HKLM:\SOFTWARE\Microsoft\Enrollments` - MDM enrollment status
-- `HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device` - Device policies
-- `HKCU:\SOFTWARE\Microsoft\PolicyManager\current\user` - User policies
+- `HKLM:\SOFTWARE\Microsoft\Enrollments` - MDM enrollment status and provider GUIDs
+- `HKLM:\SOFTWARE\Microsoft\PolicyManager\Providers\{GUID}\default\Device` - Intune-configured policies
+- `HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device` - All CSP values (including defaults)
 - `mdmdiagnosticstool` - Additional MDM diagnostics (optional)
+
+**Important distinction:**
+- **IntunePolicies**: Settings explicitly configured by Intune, read from the `Providers/{GUID}/default/Device` path. This contains only policies that were actively pushed by the Intune management server.
+- **DevicePolicies/UserPolicies**: All current CSP values from `PolicyManager/current/device`, which includes defaults and values from all sources. Useful for comparison and debugging.
+
+**Process:**
+1. Reads enrollment information from `HKLM:\SOFTWARE\Microsoft\Enrollments`
+2. Identifies the Intune enrollment GUID (where `ProviderID = 'MS DM Server'`)
+3. Reads Intune-specific policies from `Providers\{GUID}\default\Device` and `Providers\{GUID}\default\User`
+4. Reads all CSP values from `current\device` and `current\user` paths for comparison
+5. Optionally runs `mdmdiagnosticstool` for detailed diagnostics
 
 **Output structure:**
 ```powershell
 @{
-    IsEnrolled      = [bool]
-    EnrollmentInfo  = @{ UPN, DeviceId, ProviderId, ... }
-    DevicePolicies  = @(
+    IsEnrolled           = [bool]
+    Enrollments          = @(
+        @{
+            EnrollmentId   = "GUID"
+            ProviderId     = "MS DM Server"  # Intune
+            UPN            = "user@domain.com"
+            AADTenantId    = "tenant-guid"
+            EnrollmentType = [int]
+            DeviceId       = "SID"
+            IsIntune       = [bool]
+        }
+    )
+    IntuneEnrollmentGuid = "GUID"  # For provider path lookup
+    # Primary: Only Intune-configured policies
+    IntunePolicies       = @(
         @{
             Area    = "CSP Area name"
             Setting = "Setting name"
             Value   = "Configured value"
-            Source  = "PolicyManager path"
+            Scope   = "Device|User"
+            Source  = "Intune"
         }
     )
-    UserPolicies    = @(...)
+    # Secondary: All CSP values for comparison/debugging
+    DevicePolicies       = @(
+        @{
+            Area            = "CSP Area name"
+            Setting         = "Setting name"
+            Value           = "Current value"
+            Scope           = "Device"
+            Source          = "PolicyManager"
+            WinningProvider = "Provider GUID"
+            IsFromIntune    = [bool]
+        }
+    )
+    UserPolicies         = @(...)  # Same structure as DevicePolicies
+    IntunePolicyCount    = [int]   # Count of Intune-specific policies
+    TotalCSPValueCount   = [int]   # Count of all CSP values
+    DiagnosticsPath      = "C:\...\extracted"  # If mdmdiagnosticstool ran
+    CollectedAt          = [datetime]
 }
 ```
+
+### GPO Source Attribution (Get-RSoPPolicySource)
+
+This private function uses Resultant Set of Policy (RSoP) WMI to determine which GPO configured each registry policy setting.
+
+**Sources:**
+- `root\rsop\computer` - Computer-scoped RSoP data
+- `root\rsop\user\{SID}` - User-scoped RSoP data (SID with underscores instead of hyphens)
+
+**WMI Classes Used:**
+- `RSOP_GPO` - Contains GPO metadata (name, GUID, file system path)
+- `RSOP_RegistryPolicySetting` - Contains registry settings with GPO attribution
+
+**Process:**
+1. Builds a GPO lookup table from `RSOP_GPO` instances
+2. Queries `RSOP_RegistryPolicySetting` for all registry policy settings
+3. Filters to only winning policies (`precedence = 1`)
+4. Creates a lookup hashtable keyed by `"Scope|RegistryKey|ValueName"`
+5. Returns the lookup table for use by `Get-GPOPolicyData`
+
+**Lookup Key Format:**
+```
+"Machine|SOFTWARE\Policies\Microsoft\Windows\...|SettingName"
+"User|SOFTWARE\Policies\Microsoft\...|SettingName"
+```
+
+**Output structure (hashtable entry):**
+```powershell
+@{
+    SourceGPO    = "GPO Display Name"      # Human-readable GPO name
+    GPOID        = "GPO Identifier"        # GPO ID from RSoP
+    GPOGuid      = "{GUID}"                # GPO GUID
+    SOMID        = "OU=...,DC=..."         # Scope of Management (OU/domain link)
+    Precedence   = 1                       # Always 1 (winning policy)
+    CreationTime = [datetime]              # When the setting was applied
+}
+```
+
+**Notes:**
+- Requires Administrator privileges to query RSoP data
+- RSoP logging must be enabled (default unless disabled by policy)
+- If RSoP is disabled, `Get-GPOPolicyData` will temporarily enable it and run `gpupdate /force`
 
 ### SCCM/ConfigMgr (Get-SCCMPolicyData)
 
@@ -292,6 +382,7 @@ When `-SuggestMappings` is used:
 | `Write-PolicyLensLog` | Write to operational log file |
 | `Find-SettingsCatalogMatch` | Match GPO to Settings Catalog items |
 | `Get-RemoteCollectionScriptBlock` | Generate scriptblock for WinRM |
+| `Get-RSoPPolicySource` | Query RSoP WMI for GPO source attribution |
 | `Merge-PolicyData` | Combine data from multiple sources |
 
 ## Troubleshooting
