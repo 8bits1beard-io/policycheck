@@ -55,7 +55,22 @@ function Get-MDMPolicyData {
 
     $isEnrolled = $enrollments.Count -gt 0
 
-    # --- 2. Read Intune-configured policies from Providers path ---
+    # --- 2. Get last sync time from enrollment registry key ---
+    $lastSyncTime = $null
+    if ($intuneEnrollmentGuid) {
+        try {
+            $enrollmentKey = Get-Item "HKLM:\SOFTWARE\Microsoft\Enrollments\$intuneEnrollmentGuid" -ErrorAction SilentlyContinue
+            if ($enrollmentKey) {
+                $lastSyncTime = $enrollmentKey.LastWriteTime
+                Write-Verbose "Last MDM sync time: $lastSyncTime"
+            }
+        }
+        catch {
+            Write-Verbose "Could not determine last sync time: $_"
+        }
+    }
+
+    # --- 3. Read Intune-configured policies from Providers path ---
     # This contains ONLY settings explicitly pushed by Intune, not defaults
     $intunePolicies = @()
 
@@ -236,6 +251,7 @@ function Get-MDMPolicyData {
         IsEnrolled           = $isEnrolled
         Enrollments          = $enrollments
         IntuneEnrollmentGuid = $intuneEnrollmentGuid
+        LastSyncTime         = $lastSyncTime
         # Primary: Only Intune-configured policies (what users care about)
         IntunePolicies       = $intunePolicies
         # Secondary: All CSP values for comparison/debugging

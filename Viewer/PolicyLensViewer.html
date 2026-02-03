@@ -68,6 +68,11 @@
         }
 
         .badge-not-enrolled {
+            background-color: var(--accent-red);
+            color: #1e1e2e;
+        }
+
+        .badge-warning {
             background-color: var(--accent-yellow);
             color: #1e1e2e;
         }
@@ -1557,6 +1562,35 @@
             const displayPolicies = hasNewFormat ? intunePolicies : [...devicePolicies, ...userPolicies];
             const policyCount = hasNewFormat ? (mdm.IntunePolicyCount || intunePolicies.length) : displayPolicies.length;
 
+            // Calculate sync status
+            const lastSyncTime = mdm.LastSyncTime ? new Date(mdm.LastSyncTime) : null;
+            const now = new Date();
+            const hoursSinceSync = lastSyncTime ? (now - lastSyncTime) / (1000 * 60 * 60) : null;
+
+            let syncStatusHtml = '';
+            if (lastSyncTime) {
+                const syncTimeStr = lastSyncTime.toLocaleString();
+                let syncClass = 'success';
+                let syncLabel = 'Recent';
+                if (hoursSinceSync > 8) {
+                    syncClass = 'error';
+                    syncLabel = 'Stale';
+                } else if (hoursSinceSync > 4) {
+                    syncClass = 'warning';
+                    syncLabel = 'Aging';
+                }
+                const hoursAgo = Math.round(hoursSinceSync);
+                syncStatusHtml = `
+                    <div class="sync-status" style="margin-top: 10px; padding: 10px; border-radius: 6px; background: var(--card-bg);">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="badge badge-${syncClass === 'error' ? 'not-enrolled' : syncClass === 'warning' ? 'warning' : 'enrolled'}">${syncLabel}</span>
+                            <span style="color: var(--text-secondary);">Last sync: <strong>${syncTimeStr}</strong> (${hoursAgo}h ago)</span>
+                        </div>
+                        ${hoursSinceSync > 8 ? '<div class="info-box warning" style="margin-top: 10px;"><strong>Sync may be stale.</strong> Policies assigned in Intune may not have reached this device yet. Try syncing the device manually.</div>' : ''}
+                    </div>
+                `;
+            }
+
             let enrollmentHtml = '';
             if (isEnrolled && enrollments.length > 0) {
                 const enr = enrollments[0];
@@ -1568,6 +1602,7 @@
                         ${enr.AADTenantId ? `<div class="enrollment-item"><div class="key">Tenant ID</div><div class="value">${escapeHtml(enr.AADTenantId)}</div></div>` : ''}
                         ${enr.EnrollmentId ? `<div class="enrollment-item"><div class="key">Enrollment ID</div><div class="value">${escapeHtml(enr.EnrollmentId)}</div></div>` : ''}
                     </div>
+                    ${syncStatusHtml}
                 `;
             } else {
                 enrollmentHtml = '<div class="info-box warning">Device is not MDM enrolled</div>';
