@@ -97,7 +97,7 @@ function Invoke-PolicyLens {
 
     # --- Start logging ---
     Write-PolicyLensLog "========================================" -Level Info
-    Write-PolicyLensLog "PolicyLens started (v1.1.0)" -Level Info
+    Write-PolicyLensLog "PolicyLens started (v1.2.0)" -Level Info
     $logParams = "IncludeGraph=$IncludeGraph, SkipMDMDiag=$SkipMDMDiag"
     if ($isRemoteScan) { $logParams += ", ComputerName=$ComputerName" }
     Write-PolicyLensLog "Parameters: $logParams" -Level Info
@@ -105,7 +105,7 @@ function Invoke-PolicyLens {
     Write-Host ""
     Write-Host "  ┌──────────────────────────────────────────┐" -ForegroundColor Cyan
     Write-Host "  │  " -ForegroundColor Cyan -NoNewline
-    Write-Host "PolicyLens v1.1.0" -ForegroundColor White -NoNewline
+    Write-Host "PolicyLens v1.2.0" -ForegroundColor White -NoNewline
     Write-Host "                       │" -ForegroundColor Cyan
     Write-Host "  │  " -ForegroundColor Cyan -NoNewline
     Write-Host "GPO • Intune • SCCM Policy Scanner" -ForegroundColor DarkCyan -NoNewline

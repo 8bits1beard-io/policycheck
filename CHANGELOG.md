@@ -5,6 +5,19 @@ All notable changes to PolicyLens are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-02
+
+### Added
+- **MDM Sync Status** - Shows last sync time with staleness warning (>8 hours flags as stale)
+- **Device Management Status** - Header badge shows Cloud Only, Hybrid, Co-Managed, or On-Prem
+- **Intune Assignment Summary Cards** - Config Profiles, Compliance, Settings Catalog, and Apps counts
+- **Clickable Navigation** - Summary cards scroll to their respective sections
+- Execution timer displays total scan duration on completion
+
+### Changed
+- Summary cards use compact layout for cleaner appearance
+- Overlap analysis cards now use smaller format matching Intune assignments
+
 ## [1.1.0] - 2026-02-02
 
 ### Added

@@ -111,7 +111,7 @@ function ConvertTo-JsonExport {
         $exportObject = [ordered]@{
             schemaVersion = "1.0"
             exportedAt    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-            exportedBy    = "PolicyLens v1.1.0"
+            exportedBy    = "PolicyLens v1.2.0"
             device        = $deviceInfo
             gpoData       = if ($Result.PSObject.Properties['GPOData']) { $Result.GPOData } else { $null }
             mdmData       = if ($Result.PSObject.Properties['MDMData']) { $Result.MDMData } else { $null }

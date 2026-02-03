@@ -87,9 +87,10 @@ This document provides detailed technical information for developers, contributo
 **Process:**
 1. Reads enrollment information from `HKLM:\SOFTWARE\Microsoft\Enrollments`
 2. Identifies the Intune enrollment GUID (where `ProviderID = 'MS DM Server'`)
-3. Reads Intune-specific policies from `Providers\{GUID}\default\Device` and `Providers\{GUID}\default\User`
-4. Reads all CSP values from `current\device` and `current\user` paths for comparison
-5. Optionally runs `mdmdiagnosticstool` for detailed diagnostics
+3. Gets last sync time from enrollment registry key `LastWriteTime`
+4. Reads Intune-specific policies from `Providers\{GUID}\default\Device` and `Providers\{GUID}\default\User`
+5. Reads all CSP values from `current\device` and `current\user` paths for comparison
+6. Optionally runs `mdmdiagnosticstool` for detailed diagnostics
 
 **Output structure:**
 ```powershell
@@ -107,6 +108,7 @@ This document provides detailed technical information for developers, contributo
         }
     )
     IntuneEnrollmentGuid = "GUID"  # For provider path lookup
+    LastSyncTime         = [DateTime]  # Registry key last write time (indicates last sync)
     # Primary: Only Intune-configured policies
     IntunePolicies       = @(
         @{
