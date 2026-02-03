@@ -16,6 +16,8 @@
     app assignments, and Azure AD group memberships.
 .PARAMETER TenantId
     Azure AD tenant ID or domain for Graph authentication (e.g., "contoso.onmicrosoft.com").
+.PARAMETER SuggestMappings
+    Find Intune Settings Catalog matches for unmapped GPO settings (requires -IncludeGraph).
 .PARAMETER SkipMDMDiag
     Skip running mdmdiagnosticstool (can be slow on some devices).
 .PARAMETER OutputPath
@@ -46,6 +48,7 @@ param(
     [string]$ComputerName,
     [PSCredential]$Credential,
     [switch]$IncludeGraph,
+    [switch]$SuggestMappings,
     [string]$TenantId,
     [switch]$SkipMDMDiag,
     [string]$OutputPath,
@@ -63,6 +66,7 @@ $params = @{}
 if ($ComputerName) { $params['ComputerName'] = $ComputerName }
 if ($Credential) { $params['Credential'] = $Credential }
 if ($IncludeGraph) { $params['IncludeGraph'] = $true }
+if ($SuggestMappings) { $params['SuggestMappings'] = $true }
 if ($TenantId) { $params['TenantId'] = $TenantId }
 if ($SkipMDMDiag) { $params['SkipMDMDiag'] = $true }
 if ($OutputPath) { $params['OutputPath'] = $OutputPath }
