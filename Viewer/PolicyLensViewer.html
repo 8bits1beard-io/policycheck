@@ -1257,7 +1257,7 @@
                 const date = device.exportedAt ? formatDate(device.exportedAt) : 'Unknown date';
                 const gpoObjectCount = device.gpoData?.TotalGPOCount || 0;
                 const gpoSettingsCount = device.gpoData?.RegistryPolicies?.length || 0;
-                const mdmCount = (device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0);
+                const mdmCount = device.mdmData?.IntunePolicyCount ?? ((device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0));
                 const isSelected = AppState.selectedDevices.includes(index);
 
                 return `
@@ -1391,7 +1391,7 @@
         function renderSummaryCards(device) {
             const gpoObjectCount = device.gpoData?.TotalGPOCount || 0;
             const gpoSettingsCount = device.gpoData?.RegistryPolicies?.length || 0;
-            const mdmCount = (device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0);
+            const mdmCount = device.mdmData?.IntunePolicyCount ?? ((device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0));
             const sccmInstalled = device.sccmData?.IsInstalled || false;
             const analysis = device.analysis?.Summary || {};
             const matches = analysis.BothConfiguredMatch || 0;
@@ -1544,9 +1544,16 @@
             const mdm = device.mdmData || {};
             const enrollments = mdm.Enrollments || [];
             const isEnrolled = mdm.IsEnrolled;
+            // Use IntunePolicies (only Intune-configured) as primary, fall back to DevicePolicies for older exports
+            const intunePolicies = mdm.IntunePolicies || [];
             const devicePolicies = mdm.DevicePolicies || [];
             const userPolicies = mdm.UserPolicies || [];
-            const allPolicies = [...devicePolicies, ...userPolicies];
+            const totalCSPCount = mdm.TotalCSPValueCount || (devicePolicies.length + userPolicies.length);
+
+            // If we have IntunePolicies, use that; otherwise fall back to legacy DevicePolicies
+            const hasNewFormat = intunePolicies.length > 0 || mdm.IntunePolicyCount !== undefined;
+            const displayPolicies = hasNewFormat ? intunePolicies : [...devicePolicies, ...userPolicies];
+            const policyCount = hasNewFormat ? (mdm.IntunePolicyCount || intunePolicies.length) : displayPolicies.length;
 
             let enrollmentHtml = '';
             if (isEnrolled && enrollments.length > 0) {
@@ -1565,9 +1572,13 @@
             }
 
             let policiesHtml = '';
-            if (allPolicies.length > 0) {
+            if (displayPolicies.length > 0) {
+                const countLabel = hasNewFormat && totalCSPCount > 0
+                    ? `Intune-Configured Policies (${policyCount} of ${totalCSPCount} total CSP values)`
+                    : `MDM Policies (${policyCount})`;
                 policiesHtml = `
-                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">MDM Policies (${allPolicies.length})</h3>
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">${countLabel}</h3>
+                    ${hasNewFormat ? `<div class="info-box info" style="margin-bottom: 10px;">Showing only policies explicitly configured by Intune. ${totalCSPCount - policyCount} default/system CSP values are hidden.</div>` : ''}
                     <div class="filter-bar">
                         <input type="text" id="mdm-search" placeholder="Search MDM policies..." oninput="filterTable('mdm-table', 'mdm-search')">
                     </div>
@@ -1582,7 +1593,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                ${allPolicies.map(p => `
+                                ${displayPolicies.map(p => `
                                     <tr>
                                         <td>${escapeHtml(p.Area || '')}</td>
                                         <td>${escapeHtml(p.Setting || '')}</td>
@@ -1594,17 +1605,19 @@
                         </table>
                     </div>
                 `;
+            } else if (isEnrolled) {
+                policiesHtml = `<div class="info-box info" style="margin-top: 15px;">No Intune-configured policies found on this device.</div>`;
             }
 
             return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>MDM/Intune - Local Device State</h2>
+                        <h2>MDM/Intune - Local Device State${hasNewFormat ? ` (${policyCount} policies)` : ''}</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
                         <div class="info-box explanation">
-                            <strong>What this shows:</strong> Policies currently enforced on this device by Intune (read from local PolicyManager registry).<br>
+                            <strong>What this shows:</strong> Policies explicitly configured by Intune on this device (read from local PolicyManager registry).<br>
                             <strong>Why it matters:</strong> This is what Intune has successfully applied to the device. Compare with "Assigned" policies below to see if everything landed.
                         </div>
                         ${enrollmentHtml}
@@ -1993,6 +2006,39 @@
                 `;
             }
 
+            // Helper to render app table
+            const renderAppTable = (apps, title, titleColor) => {
+                if (apps.length === 0) return '';
+                return `
+                    <h3 style="margin: 15px 0 10px; color: ${titleColor};">${title} (${apps.length})</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Publisher</th>
+                                    <th>Assigned Via</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${apps.map(app => {
+                                    const assignmentReason = getAppAssignmentReason(app, deviceGroupIds, groupData);
+                                    return `
+                                        <tr>
+                                            <td><strong>${escapeHtml(app.DisplayName || 'Unknown App')}</strong></td>
+                                            <td style="font-size: 0.85rem;">${escapeHtml(app.AppType || '-')}</td>
+                                            <td style="font-size: 0.85rem;">${escapeHtml(app.Publisher || '-')}</td>
+                                            <td>${assignmentReason}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            };
+
             return `
                 <div class="section">
                     <div class="section-header collapsed">
@@ -2005,18 +2051,37 @@
                             <strong>Why it matters:</strong> Shows what apps users should be able to install, or what apps are required on this device.
                         </div>
                         ${infoMessage}
-                        ${requiredApps.length > 0 ? `
-                            <h3 style="margin: 15px 0 10px; color: var(--accent-yellow);">Required Apps (${requiredApps.length})</h3>
-                            ${requiredApps.map(app => renderAppCard(app, deviceGroupIds, groupData)).join('')}
-                        ` : ''}
-                        ${availableApps.length > 0 ? `
-                            <h3 style="margin: 15px 0 10px; color: var(--accent-green);">Available Apps (${availableApps.length})</h3>
-                            ${availableApps.map(app => renderAppCard(app, deviceGroupIds, groupData)).join('')}
-                        ` : ''}
-                        ${!hasGroupData ? appsToShow.map(app => renderAppCard(app, deviceGroupIds, groupData)).join('') : ''}
+                        ${renderAppTable(requiredApps, 'Required Apps', 'var(--accent-yellow)')}
+                        ${renderAppTable(availableApps, 'Available Apps', 'var(--accent-green)')}
+                        ${!hasGroupData && applicableApps.length > 0 ? renderAppTable(applicableApps, 'Apps', 'var(--text-secondary)') : ''}
                     </div>
                 </div>
             `;
+        }
+
+        // Get assignment reason for an app (similar to getAssignmentReason for policies)
+        function getAppAssignmentReason(app, deviceGroupIds, groupData) {
+            const applicableAssignments = (app.Assignments || []).filter(a =>
+                assignmentAppliesToDevice(a, deviceGroupIds)
+            );
+
+            if (applicableAssignments.length === 0) {
+                return '<span class="status-tag">Unknown</span>';
+            }
+
+            return applicableAssignments.map(a => {
+                if (a.TargetType === 'All Devices') {
+                    return '<span class="status-tag both-match">All Devices</span>';
+                } else if (a.TargetType === 'All Users') {
+                    return '<span class="status-tag migration-ready">All Users</span>';
+                } else if (a.GroupId && groupData?.Groups) {
+                    const group = groupData.Groups.find(g => g.ObjectId === a.GroupId);
+                    const groupName = group?.DisplayName || 'Group';
+                    return `<span class="status-tag mdm-only">${escapeHtml(groupName)}</span>`;
+                } else {
+                    return `<span class="status-tag">${escapeHtml(a.TargetType || 'Unknown')}</span>`;
+                }
+            }).join(' ');
         }
 
         // Check if an app applies to the device
@@ -2453,8 +2518,12 @@
         }
 
         function computeMDMDiff(device1, device2) {
-            const policies1 = [...(device1.mdmData?.DevicePolicies || []), ...(device1.mdmData?.UserPolicies || [])];
-            const policies2 = [...(device2.mdmData?.DevicePolicies || []), ...(device2.mdmData?.UserPolicies || [])];
+            const policies1 = device1.mdmData?.IntunePolicies?.length > 0
+                ? device1.mdmData.IntunePolicies
+                : [...(device1.mdmData?.DevicePolicies || []), ...(device1.mdmData?.UserPolicies || [])];
+            const policies2 = device2.mdmData?.IntunePolicies?.length > 0
+                ? device2.mdmData.IntunePolicies
+                : [...(device2.mdmData?.DevicePolicies || []), ...(device2.mdmData?.UserPolicies || [])];
 
             const keyFn = (p) => `${p.Area || ''}|${p.Setting || ''}|${p.Scope || ''}`;
 

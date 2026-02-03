@@ -5,10 +5,14 @@ function Get-MDMPolicyData {
     .DESCRIPTION
         Checks MDM enrollment status, reads applied MDM policies from PolicyManager
         registry keys, and optionally runs mdmdiagnosticstool for detailed diagnostics.
+
+        Returns two sets of policies:
+        - IntunePolicies: Only settings explicitly configured by Intune (from Providers path)
+        - AllCSPValues: All current CSP values including defaults (for debugging)
     .PARAMETER SkipMDMDiag
         Skip running mdmdiagnosticstool (can be slow on some devices).
     .OUTPUTS
-        PSCustomObject with enrollment info, device/user policies, and diagnostics path.
+        PSCustomObject with enrollment info, Intune policies, and diagnostics path.
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
@@ -21,6 +25,7 @@ function Get-MDMPolicyData {
     # --- 1. Check MDM enrollment status ---
     $enrollments = @()
     $enrollmentPath = 'HKLM:\SOFTWARE\Microsoft\Enrollments'
+    $intuneEnrollmentGuid = $null
 
     if (Test-Path $enrollmentPath) {
         $enrollments = @(Get-ChildItem $enrollmentPath -ErrorAction SilentlyContinue |
@@ -30,6 +35,12 @@ function Get-MDMPolicyData {
             } |
             ForEach-Object {
                 $props = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
+
+                # Identify Intune enrollment (ProviderID = "MS DM Server")
+                if ($props.ProviderID -eq 'MS DM Server') {
+                    $intuneEnrollmentGuid = $_.PSChildName
+                }
+
                 [PSCustomObject]@{
                     EnrollmentId   = $_.PSChildName
                     ProviderId     = $props.ProviderID
@@ -37,13 +48,85 @@ function Get-MDMPolicyData {
                     AADTenantId    = $props.AADTenantID
                     EnrollmentType = $props.EnrollmentType
                     DeviceId       = $props.SID
+                    IsIntune       = ($props.ProviderID -eq 'MS DM Server')
                 }
             })
     }
 
     $isEnrolled = $enrollments.Count -gt 0
 
-    # --- 2. Read applied MDM policies from PolicyManager ---
+    # --- 2. Read Intune-configured policies from Providers path ---
+    # This contains ONLY settings explicitly pushed by Intune, not defaults
+    $intunePolicies = @()
+
+    if ($intuneEnrollmentGuid) {
+        Write-Verbose "Found Intune enrollment GUID: $intuneEnrollmentGuid"
+
+        # Device policies from Intune provider
+        $intuneDevicePath = "HKLM:\SOFTWARE\Microsoft\PolicyManager\Providers\$intuneEnrollmentGuid\default\Device"
+        if (Test-Path $intuneDevicePath) {
+            $areas = Get-ChildItem $intuneDevicePath -ErrorAction SilentlyContinue
+            foreach ($area in $areas) {
+                try {
+                    $props = Get-ItemProperty $area.PSPath -ErrorAction SilentlyContinue
+                    if (-not $props) { continue }
+
+                    $props.PSObject.Properties |
+                        Where-Object { $_.Name -notmatch '^PS(Path|ParentPath|ChildName|Provider|Drive)$' } |
+                        ForEach-Object {
+                            $intunePolicies += [PSCustomObject]@{
+                                Area    = $area.PSChildName
+                                Setting = $_.Name
+                                Value   = $_.Value
+                                Scope   = 'Device'
+                                Source  = 'Intune'
+                            }
+                        }
+                }
+                catch {
+                    Write-Verbose "Error reading Intune device area $($area.PSChildName): $_"
+                }
+            }
+        }
+
+        # User policies from Intune provider
+        $intuneUserPath = "HKLM:\SOFTWARE\Microsoft\PolicyManager\Providers\$intuneEnrollmentGuid\default\User"
+        if (Test-Path $intuneUserPath) {
+            $userSubPaths = Get-ChildItem $intuneUserPath -ErrorAction SilentlyContinue
+            foreach ($userSub in $userSubPaths) {
+                $userAreas = Get-ChildItem $userSub.PSPath -ErrorAction SilentlyContinue
+                foreach ($area in $userAreas) {
+                    try {
+                        $props = Get-ItemProperty $area.PSPath -ErrorAction SilentlyContinue
+                        if (-not $props) { continue }
+
+                        $props.PSObject.Properties |
+                            Where-Object { $_.Name -notmatch '^PS(Path|ParentPath|ChildName|Provider|Drive)$' } |
+                            ForEach-Object {
+                                $intunePolicies += [PSCustomObject]@{
+                                    Area    = $area.PSChildName
+                                    Setting = $_.Name
+                                    Value   = $_.Value
+                                    Scope   = 'User'
+                                    Source  = 'Intune'
+                                }
+                            }
+                    }
+                    catch {
+                        Write-Verbose "Error reading Intune user area: $_"
+                    }
+                }
+            }
+        }
+
+        Write-Verbose "Found $($intunePolicies.Count) Intune-configured policies"
+    }
+    else {
+        Write-Verbose "No Intune enrollment found - cannot read Intune-specific policies"
+    }
+
+    # --- 3. Read ALL current CSP values (for comparison/debugging) ---
+    # This includes defaults and values from all sources
     $devicePolicies = @()
     $deviceBasePath = 'HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device'
 
@@ -55,14 +138,21 @@ function Get-MDMPolicyData {
                 if (-not $props) { continue }
 
                 $props.PSObject.Properties |
-                    Where-Object { $_.Name -notmatch '^PS(Path|ParentPath|ChildName|Provider|Drive)$' } |
+                    Where-Object { $_.Name -notmatch '^PS(Path|ParentPath|ChildName|Provider|Drive)$' -and $_.Name -notmatch '_WinningProvider$' } |
                     ForEach-Object {
+                        # Check for winning provider info
+                        $winningProviderName = "$($_.Name)_WinningProvider"
+                        $winningProvider = $props.$winningProviderName
+                        $isFromIntune = ($winningProvider -eq $intuneEnrollmentGuid)
+
                         $devicePolicies += [PSCustomObject]@{
-                            Area    = $area.PSChildName
-                            Setting = $_.Name
-                            Value   = $_.Value
-                            Scope   = 'Device'
-                            Source  = 'PolicyManager'
+                            Area            = $area.PSChildName
+                            Setting         = $_.Name
+                            Value           = $_.Value
+                            Scope           = 'Device'
+                            Source          = 'PolicyManager'
+                            WinningProvider = $winningProvider
+                            IsFromIntune    = $isFromIntune
                         }
                     }
             }
@@ -76,7 +166,6 @@ function Get-MDMPolicyData {
     $userBasePath = 'HKLM:\SOFTWARE\Microsoft\PolicyManager\current\user'
 
     if (Test-Path $userBasePath) {
-        # User policies may have a SID-based subfolder
         $userSubPaths = Get-ChildItem $userBasePath -ErrorAction SilentlyContinue
         foreach ($userSub in $userSubPaths) {
             $userAreas = Get-ChildItem $userSub.PSPath -ErrorAction SilentlyContinue
@@ -86,54 +175,25 @@ function Get-MDMPolicyData {
                     if (-not $props) { continue }
 
                     $props.PSObject.Properties |
-                        Where-Object { $_.Name -notmatch '^PS(Path|ParentPath|ChildName|Provider|Drive)$' } |
+                        Where-Object { $_.Name -notmatch '^PS(Path|ParentPath|ChildName|Provider|Drive)$' -and $_.Name -notmatch '_WinningProvider$' } |
                         ForEach-Object {
+                            $winningProviderName = "$($_.Name)_WinningProvider"
+                            $winningProvider = $props.$winningProviderName
+                            $isFromIntune = ($winningProvider -eq $intuneEnrollmentGuid)
+
                             $userPolicies += [PSCustomObject]@{
-                                Area    = $area.PSChildName
-                                Setting = $_.Name
-                                Value   = $_.Value
-                                Scope   = 'User'
-                                Source  = 'PolicyManager'
+                                Area            = $area.PSChildName
+                                Setting         = $_.Name
+                                Value           = $_.Value
+                                Scope           = 'User'
+                                Source          = 'PolicyManager'
+                                WinningProvider = $winningProvider
+                                IsFromIntune    = $isFromIntune
                             }
                         }
                 }
                 catch {
                     Write-Verbose "Error reading MDM user area: $_"
-                }
-            }
-        }
-    }
-
-    # --- 3. Also check PolicyManager providers for source info ---
-    $policyProviders = @()
-    $providerPath = 'HKLM:\SOFTWARE\Microsoft\PolicyManager\providers'
-
-    if (Test-Path $providerPath) {
-        $providers = Get-ChildItem $providerPath -ErrorAction SilentlyContinue
-        foreach ($provider in $providers) {
-            $providerName = $provider.PSChildName
-            $defaultPath = Join-Path $provider.PSPath 'default'
-            if (Test-Path $defaultPath) {
-                $providerAreas = Get-ChildItem $defaultPath -ErrorAction SilentlyContinue
-                foreach ($pa in $providerAreas) {
-                    try {
-                        $props = Get-ItemProperty $pa.PSPath -ErrorAction SilentlyContinue
-                        if (-not $props) { continue }
-
-                        $props.PSObject.Properties |
-                            Where-Object { $_.Name -notmatch '^PS(Path|ParentPath|ChildName|Provider|Drive)$' } |
-                            ForEach-Object {
-                                $policyProviders += [PSCustomObject]@{
-                                    ProviderId = $providerName
-                                    Area       = $pa.PSChildName
-                                    Setting    = $_.Name
-                                    Value      = $_.Value
-                                }
-                            }
-                    }
-                    catch {
-                        Write-Verbose "Error reading provider area: $_"
-                    }
                 }
             }
         }
@@ -154,7 +214,6 @@ function Get-MDMPolicyData {
                 -NoNewWindow -Wait -PassThru -ErrorAction SilentlyContinue
 
             if ($proc.ExitCode -eq 0 -and (Test-Path $diagCab)) {
-                # Extract the cab to read the XML files
                 $extractPath = Join-Path $diagFolder 'extracted'
                 New-Item -Path $extractPath -ItemType Directory -Force | Out-Null
                 & expand.exe $diagCab -F:* $extractPath | Out-Null
@@ -174,12 +233,18 @@ function Get-MDMPolicyData {
     }
 
     [PSCustomObject]@{
-        IsEnrolled      = $isEnrolled
-        Enrollments     = $enrollments
-        DevicePolicies  = $devicePolicies
-        UserPolicies    = $userPolicies
-        PolicyProviders = $policyProviders
-        DiagnosticsPath = $diagPath
-        CollectedAt     = Get-Date
+        IsEnrolled           = $isEnrolled
+        Enrollments          = $enrollments
+        IntuneEnrollmentGuid = $intuneEnrollmentGuid
+        # Primary: Only Intune-configured policies (what users care about)
+        IntunePolicies       = $intunePolicies
+        # Secondary: All CSP values for comparison/debugging
+        DevicePolicies       = $devicePolicies
+        UserPolicies         = $userPolicies
+        # Summary counts
+        IntunePolicyCount    = $intunePolicies.Count
+        TotalCSPValueCount   = $devicePolicies.Count + $userPolicies.Count
+        DiagnosticsPath      = $diagPath
+        CollectedAt          = Get-Date
     }
 }
