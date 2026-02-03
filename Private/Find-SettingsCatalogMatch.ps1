@@ -7,7 +7,9 @@ function Find-SettingsCatalogMatch {
         that correspond to a given GPO registry setting. Returns ranked matches
         with confidence scores and reasoning.
     .PARAMETER GPOSetting
-        The GPO registry setting to match (PSCustomObject with Path, ValueName, Category).
+        The GPO registry setting to match. Supports both formats:
+        - From DetailedResults: GPOPath, GPOValueName, Category
+        - Direct: Path, ValueName, Category
     .PARAMETER CatalogSettings
         Array of Settings Catalog definitions from Get-SettingsCatalogMappings.
     .PARAMETER ExistingMappings
@@ -26,12 +28,16 @@ function Find-SettingsCatalogMatch {
         [hashtable]$ExistingMappings
     )
 
+    # Normalize property names (DetailedResults uses GPOPath/GPOValueName, but we support both)
+    $gpoPath = if ($GPOSetting.PSObject.Properties['GPOPath']) { $GPOSetting.GPOPath } else { $GPOSetting.Path }
+    $gpoValueName = if ($GPOSetting.PSObject.Properties['GPOValueName']) { $GPOSetting.GPOValueName } else { $GPOSetting.ValueName }
+
     # Phase 1: Check if already mapped in SettingsMap.psd1
     if ($ExistingMappings) {
         foreach ($category in $ExistingMappings.Keys) {
             foreach ($mapping in $ExistingMappings[$category]) {
-                if ($GPOSetting.Path -match $mapping.GPOPathPattern) {
-                    Write-Verbose "Found static mapping for: $($GPOSetting.Path)"
+                if ($gpoPath -match $mapping.GPOPathPattern) {
+                    Write-Verbose "Found static mapping for: $gpoPath"
                     return @([PSCustomObject]@{
                         Setting = [PSCustomObject]@{
                             DisplayName = $mapping.MDMSetting
@@ -52,7 +58,7 @@ function Find-SettingsCatalogMatch {
     $candidates = @()
 
     # Extract path components for matching
-    $pathComponents = $GPOSetting.Path -split '\\' | Where-Object { $_ }
+    $pathComponents = $gpoPath -split '\\' | Where-Object { $_ }
 
     # Strategy 1: CSP URI path matching
     foreach ($setting in $CatalogSettings) {
@@ -70,13 +76,13 @@ function Find-SettingsCatalogMatch {
         }
 
         # Check value name match
-        if ($GPOSetting.ValueName -and $setting.FullCspUri -match [regex]::Escape($GPOSetting.ValueName)) {
+        if ($gpoValueName -and $setting.FullCspUri -match [regex]::Escape($gpoValueName)) {
             $score += 25
-            $reasons += "CSP URI contains value name: $($GPOSetting.ValueName)"
+            $reasons += "CSP URI contains value name: $gpoValueName"
         }
 
         # Check display name token overlap
-        $gpoTokens = @($GPOSetting.ValueName, $pathComponents) | Where-Object { $_ } | ForEach-Object { $_.ToLower() }
+        $gpoTokens = @($gpoValueName, $pathComponents) | Where-Object { $_ } | ForEach-Object { $_.ToLower() }
         $settingTokens = ($setting.DisplayName -split '\s+' | ForEach-Object { $_.ToLower() })
 
         $matchedTokens = $gpoTokens | Where-Object { $token = $_; $settingTokens -contains $token }
@@ -86,7 +92,7 @@ function Find-SettingsCatalogMatch {
         }
 
         # Detect inverse polarity (Disable vs Allow)
-        $gpoHasDisable = $GPOSetting.ValueName -match '(Disable|Deny|Prevent|Block)'
+        $gpoHasDisable = $gpoValueName -match '(Disable|Deny|Prevent|Block)'
         $settingHasAllow = $setting.DisplayName -match '(Allow|Enable|Turn on)'
         if ($gpoHasDisable -and $settingHasAllow) {
             $score += 10

@@ -2526,19 +2526,19 @@
             let isExcluded = false;
 
             for (const assignment of assignments) {
-                const targetType = (assignment.TargetType || '').replace('#microsoft.graph.', '');
+                const targetType = assignment.TargetType || '';
                 const groupId = assignment.GroupId;
 
-                // Check for "All Devices" or "All Users" assignments
-                if (targetType === 'allDevicesAssignmentTarget' || targetType === 'allLicensedUsersAssignmentTarget') {
+                // Check for "All Devices" or "All Users" assignments (friendly labels from PowerShell)
+                if (targetType === 'All Devices' || targetType === 'All Users') {
                     isIncluded = true;
                 }
-                // Check for group-based assignment
-                else if (targetType === 'groupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
+                // Check for group-based assignment (format: "Group: {groupId}")
+                else if (targetType.startsWith('Group:') && groupId && deviceGroupIds.includes(groupId)) {
                     isIncluded = true;
                 }
-                // Check for exclusion
-                else if (targetType === 'exclusionGroupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
+                // Check for exclusion (format: "Exclude: {groupId}")
+                else if (targetType.startsWith('Exclude:') && groupId && deviceGroupIds.includes(groupId)) {
                     isExcluded = true;
                 }
             }
@@ -2552,14 +2552,14 @@
             const reasons = [];
 
             for (const assignment of assignments) {
-                const targetType = (assignment.TargetType || '').replace('#microsoft.graph.', '');
+                const targetType = assignment.TargetType || '';
                 const groupId = assignment.GroupId;
 
-                if (targetType === 'allDevicesAssignmentTarget') {
+                if (targetType === 'All Devices') {
                     reasons.push('<span class="status-tag both-match">All Devices</span>');
-                } else if (targetType === 'allLicensedUsersAssignmentTarget') {
+                } else if (targetType === 'All Users') {
                     reasons.push('<span class="status-tag migration-ready">All Users</span>');
-                } else if (targetType === 'groupAssignmentTarget' && groupId && deviceGroupIds.includes(groupId)) {
+                } else if (targetType.startsWith('Group:') && groupId && deviceGroupIds.includes(groupId)) {
                     // Find group name
                     const group = groupData?.Groups?.find(g => g.ObjectId === groupId);
                     const groupName = group?.DisplayName || 'Group';
