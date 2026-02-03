@@ -152,8 +152,49 @@
 
         .summary-card.status .status-icon.check::before {
             content: "\2713";
-            color: var(--accent-green);
         }
+
+        /* Small clickable summary cards */
+        .summary-grid-compact {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 0;
+        }
+
+        .summary-card-small {
+            background: var(--bg-card);
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .summary-card-small:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .summary-card-small .number {
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .summary-card-small .label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .summary-card-small.green .number { color: var(--accent-green); }
+        .summary-card-small.red .number { color: var(--accent-red); }
+        .summary-card-small.cyan .number { color: var(--accent-cyan); }
+        .summary-card-small.blue .number { color: var(--accent-blue); }
+        .summary-card-small.magenta .number { color: var(--accent-magenta); }
 
         .summary-card.status .status-icon.x::before {
             content: "\2717";
@@ -1338,18 +1379,37 @@
             const container = document.getElementById('single-content');
             const name = device.device?.computerName || 'Unknown Device';
             const enrolled = device.mdmData?.IsEnrolled;
-            const domainJoined = device.device?.domainJoined ? 'Domain Joined' : 'Not Domain Joined';
-            const azureJoined = device.device?.azureADJoined ? 'Azure AD Joined' : 'Not Azure AD Joined';
+            const domainJoined = device.device?.domainJoined;
+            const azureJoined = device.device?.azureADJoined;
+            const hybridJoined = device.device?.hybridJoined;
+            const sccmInstalled = device.sccmData?.IsInstalled;
+
+            // Determine management type
+            let managementType = 'Unmanaged';
+            let managementClass = 'gray';
+            if (hybridJoined || (domainJoined && azureJoined)) {
+                managementType = sccmInstalled ? 'Hybrid + Co-Managed' : 'Hybrid Joined';
+                managementClass = 'cyan';
+            } else if (azureJoined && !domainJoined) {
+                managementType = 'Cloud Only';
+                managementClass = 'blue';
+            } else if (domainJoined && sccmInstalled) {
+                managementType = 'On-Prem (SCCM)';
+                managementClass = 'magenta';
+            } else if (domainJoined) {
+                managementType = 'Domain Joined';
+                managementClass = 'gray';
+            }
 
             container.innerHTML = `
                 <div class="report-header">
                     <h1>${escapeHtml(name)}
                         ${enrolled ? '<span class="badge badge-enrolled">MDM Enrolled</span>' : '<span class="badge badge-not-enrolled">Not Enrolled</span>'}
+                        <span class="badge badge-${managementClass}" style="background-color: var(--accent-${managementClass}); color: #1e1e2e;">${managementType}</span>
                     </h1>
                     <div class="subtitle">
                         Exported: ${device.exportedAt ? formatDate(device.exportedAt) : 'Unknown'} |
-                        OS: ${escapeHtml(device.device?.osVersion || 'Unknown')} |
-                        ${domainJoined} | ${azureJoined}
+                        OS: ${escapeHtml(device.device?.osVersion || 'Unknown')}
                     </div>
                 </div>
                 ${renderSummaryCards(device)}
@@ -1404,54 +1464,85 @@
             const migrationReady = analysis.GPOOnlyWithMapping || 0;
             const noMapping = analysis.GPOOnlyNoMapping || 0;
 
+            // Calculate Intune assignment counts
+            const graphData = device.graphData || {};
+            const groupData = device.groupData || {};
+            const appData = device.appData || {};
+            const deviceGroupIds = getDeviceGroupIds(groupData);
+
+            const profiles = graphData.Profiles || [];
+            const compliance = graphData.CompliancePolicies || [];
+            const settingsCatalog = graphData.SettingsCatalog || [];
+            const allApps = appData.Apps || [];
+
+            const applicableProfiles = profiles.filter(p => policyAppliesToDevice(p, deviceGroupIds)).length;
+            const applicableCompliance = compliance.filter(p => policyAppliesToDevice(p, deviceGroupIds)).length;
+            const applicableCatalog = settingsCatalog.filter(p => policyAppliesToDevice(p, deviceGroupIds)).length;
+            const applicableApps = allApps.filter(app => appAppliesToDevice(app, deviceGroupIds)).length;
+            const hasGraphData = graphData.Available;
+
             return `
                 <div class="summary-section">
-                    <div class="summary-section-header">Policy Sources</div>
+                    <div class="summary-section-header">Policy Sources (Applied on Device)</div>
                     <div class="summary-grid">
-                        <div class="summary-card blue">
+                        <div class="summary-card blue" onclick="scrollToSection('section-gpo')" style="cursor:pointer;">
                             <span class="number">${gpoObjectCount}</span>
                             <span class="label">GPOs Applied</span>
-                            <span class="description">Group Policy Objects</span>
+                            <span class="description">${gpoSettingsCount} registry settings</span>
                         </div>
-                        <div class="summary-card blue">
-                            <span class="number">${gpoSettingsCount}</span>
-                            <span class="label">GPO Settings</span>
-                            <span class="description">Registry policies from GPO</span>
-                        </div>
-                        <div class="summary-card blue">
+                        <div class="summary-card blue" onclick="scrollToSection('section-mdm')" style="cursor:pointer;">
                             <span class="number">${mdmCount}</span>
-                            <span class="label">MDM Settings</span>
-                            <span class="description">Policies from Intune/MDM</span>
+                            <span class="label">MDM Policies</span>
+                            <span class="description">From Intune/MDM</span>
                         </div>
-                        <div class="summary-card ${sccmInstalled ? 'green' : 'gray'} status">
-                            <span class="number">${sccmInstalled ? 'Installed' : 'Not Installed'}</span>
-                            <span class="label">SCCM Status</span>
-                            <span class="description">${sccmInstalled ? 'ConfigMgr client detected' : 'No ConfigMgr client'}</span>
+                        <div class="summary-card ${sccmInstalled ? 'green' : 'gray'} status" onclick="scrollToSection('section-sccm')" style="cursor:pointer;">
+                            <span class="number">${sccmInstalled ? 'Yes' : 'No'}</span>
+                            <span class="label">SCCM Client</span>
+                            <span class="description">${sccmInstalled ? 'ConfigMgr installed' : 'Not installed'}</span>
                         </div>
                     </div>
                 </div>
+                ${hasGraphData ? `
+                <div class="summary-section">
+                    <div class="summary-section-header">Intune Assignments (from Graph API)</div>
+                    <div class="summary-grid-compact">
+                        <div class="summary-card-small cyan" onclick="scrollToSection('section-profiles')">
+                            <span class="number">${applicableProfiles}</span>
+                            <span class="label">Config Profiles</span>
+                        </div>
+                        <div class="summary-card-small cyan" onclick="scrollToSection('section-profiles')">
+                            <span class="number">${applicableCompliance}</span>
+                            <span class="label">Compliance</span>
+                        </div>
+                        <div class="summary-card-small cyan" onclick="scrollToSection('section-profiles')">
+                            <span class="number">${applicableCatalog}</span>
+                            <span class="label">Settings Catalog</span>
+                        </div>
+                        <div class="summary-card-small magenta" onclick="scrollToSection('section-apps')">
+                            <span class="number">${applicableApps}</span>
+                            <span class="label">Apps</span>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
                 <div class="summary-section">
                     <div class="summary-section-header">Overlap Analysis</div>
-                    <div class="summary-grid">
-                        <div class="summary-card green">
+                    <div class="summary-grid-compact">
+                        <div class="summary-card-small green" onclick="scrollToSection('section-overlap')">
                             <span class="number">${matches}</span>
                             <span class="label">Matches</span>
-                            <span class="description">Same setting, same value</span>
                         </div>
-                        <div class="summary-card red">
+                        <div class="summary-card-small red" onclick="scrollToSection('section-overlap')">
                             <span class="number">${conflicts}</span>
                             <span class="label">Conflicts</span>
-                            <span class="description">Same setting, different values</span>
                         </div>
-                        <div class="summary-card cyan">
+                        <div class="summary-card-small cyan" onclick="scrollToSection('section-overlap')">
                             <span class="number">${migrationReady}</span>
                             <span class="label">Migration Ready</span>
-                            <span class="description">GPO-only with Intune mapping</span>
                         </div>
-                        <div class="summary-card magenta">
+                        <div class="summary-card-small magenta" onclick="scrollToSection('section-overlap')">
                             <span class="number">${noMapping}</span>
                             <span class="label">No Mapping</span>
-                            <span class="description">GPO-only, no Intune equivalent</span>
                         </div>
                     </div>
                 </div>
@@ -1490,7 +1581,7 @@
             const settings = device.gpoData?.RegistryPolicies || [];
             if (settings.length === 0) {
                 return `
-                    <div class="section">
+                    <div class="section" id="section-gpo">
                         <div class="section-header">
                             <h2>GPO Registry Settings (0)</h2>
                             <span class="toggle">&#9660;</span>
@@ -1503,7 +1594,7 @@
             }
 
             return `
-                <div class="section">
+                <div class="section" id="section-gpo">
                     <div class="section-header">
                         <h2>Group Policy (GPO) - Registry Settings (${settings.length})</h2>
                         <span class="toggle">&#9660;</span>
@@ -1647,7 +1738,7 @@
             }
 
             return `
-                <div class="section">
+                <div class="section" id="section-mdm">
                     <div class="section-header">
                         <h2>MDM/Intune - Local Device State${hasNewFormat ? ` (${policyCount} policies)` : ''}</h2>
                         <span class="toggle">&#9660;</span>
@@ -1668,7 +1759,7 @@
             const sccm = device.sccmData;
             if (!sccm || !sccm.IsInstalled) {
                 return `
-                    <div class="section">
+                    <div class="section" id="section-sccm">
                         <div class="section-header collapsed">
                             <h2>SCCM/ConfigMgr</h2>
                             <span class="toggle">&#9660;</span>
@@ -1795,7 +1886,7 @@
             }
 
             return `
-                <div class="section">
+                <div class="section" id="section-sccm">
                     <div class="section-header collapsed">
                         <h2>SCCM/ConfigMgr</h2>
                         <span class="toggle">&#9660;</span>
@@ -1816,7 +1907,7 @@
 
             if (overlap.length === 0) {
                 return `
-                    <div class="section">
+                    <div class="section" id="section-overlap">
                         <div class="section-header">
                             <h2>Overlap Analysis (0)</h2>
                             <span class="toggle">&#9660;</span>
@@ -1855,7 +1946,7 @@
             ` : '';
 
             return `
-                <div class="section">
+                <div class="section" id="section-overlap">
                     <div class="section-header">
                         <h2>GPO vs Intune Overlap Analysis (${overlap.length} settings)</h2>
                         <span class="toggle">&#9660;</span>
@@ -2000,7 +2091,7 @@
 
             if (applicableApps.length === 0 && hasGroupData) {
                 return `
-                    <div class="section">
+                    <div class="section" id="section-apps">
                         <div class="section-header collapsed">
                             <h2>Intune App Assignments (0 of ${allApps.length})</h2>
                             <span class="toggle">&#9660;</span>
@@ -2077,7 +2168,7 @@
             };
 
             return `
-                <div class="section">
+                <div class="section" id="section-apps">
                     <div class="section-header collapsed">
                         <h2>Intune Application Assignments (${applicableApps.length} of ${allApps.length})</h2>
                         <span class="toggle">&#9660;</span>
@@ -2399,7 +2490,7 @@
             }
 
             return `
-                <div class="section">
+                <div class="section" id="section-profiles">
                     <div class="section-header">
                         <h2>Intune Configuration Profiles (${applicableCount} of ${totalCount})</h2>
                         <span class="toggle">&#9660;</span>
@@ -2835,6 +2926,21 @@
                 const matchesStatus = !statusFilter || status === statusFilter;
                 row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
             });
+        }
+
+        // Scroll to section by ID
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                // Expand if collapsed
+                const header = section.querySelector('.section-header');
+                const body = section.querySelector('.section-body');
+                if (header?.classList.contains('collapsed')) {
+                    header.classList.remove('collapsed');
+                    body?.classList.remove('hidden');
+                }
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
 
         // Collapsible sections
