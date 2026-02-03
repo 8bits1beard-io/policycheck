@@ -1579,14 +1579,16 @@
 
         function renderGPOSection(device) {
             const settings = device.gpoData?.RegistryPolicies || [];
+            const gpoCount = device.gpoData?.TotalGPOCount || 0;
+
             if (settings.length === 0) {
                 return `
                     <div class="section" id="section-gpo">
-                        <div class="section-header">
-                            <h2>GPO Registry Settings (0)</h2>
+                        <div class="section-header collapsed">
+                            <h2>Group Policy - ${gpoCount} GPOs Applied, 0 Registry Settings</h2>
                             <span class="toggle">&#9660;</span>
                         </div>
-                        <div class="section-body">
+                        <div class="section-body hidden">
                             <p style="color: var(--text-secondary);">No GPO registry settings found.</p>
                         </div>
                     </div>
@@ -1595,11 +1597,11 @@
 
             return `
                 <div class="section" id="section-gpo">
-                    <div class="section-header">
-                        <h2>Group Policy (GPO) - Registry Settings (${settings.length})</h2>
+                    <div class="section-header collapsed">
+                        <h2>Group Policy - ${gpoCount} GPOs Applied, ${settings.length} Registry Settings</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
-                    <div class="section-body">
+                    <div class="section-body hidden">
                         <div class="info-box explanation">
                             <strong>What this shows:</strong> Registry-based policies currently applied from Active Directory Group Policy Objects.<br>
                             <strong>Why it matters:</strong> These settings are managed via GPO. When migrating to Intune, you'll need to recreate equivalent policies.
@@ -1737,13 +1739,16 @@
                 policiesHtml = `<div class="info-box info" style="margin-top: 15px;">No Intune-configured policies found on this device.</div>`;
             }
 
+            const enrolledStatus = isEnrolled ? 'Enrolled' : 'Not Enrolled';
+            const policyLabel = hasNewFormat ? `${policyCount} Intune Policies Applied` : 'Legacy Format';
+
             return `
                 <div class="section" id="section-mdm">
-                    <div class="section-header">
-                        <h2>MDM/Intune - Local Device State${hasNewFormat ? ` (${policyCount} policies)` : ''}</h2>
+                    <div class="section-header collapsed">
+                        <h2>MDM/Intune - ${enrolledStatus}, ${policyLabel}</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
-                    <div class="section-body">
+                    <div class="section-body hidden">
                         <div class="info-box explanation">
                             <strong>What this shows:</strong> Policies explicitly configured by Intune on this device (read from local PolicyManager registry).<br>
                             <strong>Why it matters:</strong> This is what Intune has successfully applied to the device. Compare with "Assigned" policies below to see if everything landed.
@@ -1761,7 +1766,7 @@
                 return `
                     <div class="section" id="section-sccm">
                         <div class="section-header collapsed">
-                            <h2>SCCM/ConfigMgr</h2>
+                            <h2>SCCM/ConfigMgr - Not Installed</h2>
                             <span class="toggle">&#9660;</span>
                         </div>
                         <div class="section-body hidden">
@@ -1888,7 +1893,7 @@
             return `
                 <div class="section" id="section-sccm">
                     <div class="section-header collapsed">
-                        <h2>SCCM/ConfigMgr</h2>
+                        <h2>SCCM/ConfigMgr - ${apps.length} Apps, ${baselines.length} Baselines, ${updates.length} Updates</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
@@ -1908,11 +1913,11 @@
             if (overlap.length === 0) {
                 return `
                     <div class="section" id="section-overlap">
-                        <div class="section-header">
-                            <h2>Overlap Analysis (0)</h2>
+                        <div class="section-header collapsed">
+                            <h2>GPO vs MDM Overlap Analysis - No Data</h2>
                             <span class="toggle">&#9660;</span>
                         </div>
-                        <div class="section-body">
+                        <div class="section-body hidden">
                             <p style="color: var(--text-secondary);">No overlap analysis data available.</p>
                         </div>
                     </div>
@@ -1945,13 +1950,19 @@
                 </div>
             ` : '';
 
+            // Calculate summary counts for title
+            const summary = device.analysis?.Summary || {};
+            const conflicts = summary.ValuesInConflict || 0;
+            const matches = summary.BothConfiguredMatch || 0;
+            const migrationReady = summary.GPOOnlyWithMapping || 0;
+
             return `
                 <div class="section" id="section-overlap">
-                    <div class="section-header">
-                        <h2>GPO vs Intune Overlap Analysis (${overlap.length} settings)</h2>
+                    <div class="section-header collapsed">
+                        <h2>GPO vs MDM Overlap Analysis - ${overlap.length} Settings (${matches} Match, ${conflicts} Conflicts, ${migrationReady} Migration Ready)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
-                    <div class="section-body">
+                    <div class="section-body hidden">
                         <div class="info-box explanation">
                             <strong>What this shows:</strong> Compares each GPO registry setting against Intune/MDM to identify overlaps and conflicts.<br>
                             <strong>Why it matters:</strong> Find settings configured in both places (conflicts), or GPO settings ready to migrate to Intune.
@@ -2093,7 +2104,7 @@
                 return `
                     <div class="section" id="section-apps">
                         <div class="section-header collapsed">
-                            <h2>Intune App Assignments (0 of ${allApps.length})</h2>
+                            <h2>Intune Apps Assigned to Device - 0 of ${allApps.length} Apps</h2>
                             <span class="toggle">&#9660;</span>
                         </div>
                         <div class="section-body hidden">
@@ -2170,7 +2181,7 @@
             return `
                 <div class="section" id="section-apps">
                     <div class="section-header collapsed">
-                        <h2>Intune Application Assignments (${applicableApps.length} of ${allApps.length})</h2>
+                        <h2>Intune Apps Assigned to Device - ${applicableApps.length} of ${allApps.length} Apps (${requiredApps.length} Required, ${availableApps.length} Available)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
@@ -2291,9 +2302,9 @@
             };
 
             return `
-                <div class="section">
+                <div class="section" id="section-groups">
                     <div class="section-header collapsed">
-                        <h2>Azure AD Group Memberships (${groups.length} groups)</h2>
+                        <h2>Azure AD Group Memberships - ${groups.length} Groups (${dynamicGroups.length} Dynamic, ${assignedGroups.length} Assigned)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
@@ -2491,11 +2502,11 @@
 
             return `
                 <div class="section" id="section-profiles">
-                    <div class="section-header">
-                        <h2>Intune Configuration Profiles (${applicableCount} of ${totalCount})</h2>
+                    <div class="section-header collapsed">
+                        <h2>Intune Policies Assigned to Device - ${applicableCount} of ${totalCount} (${applicableProfiles.length} Config, ${applicableCompliance.length} Compliance, ${applicableCatalog.length} Settings Catalog)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
-                    <div class="section-body">
+                    <div class="section-body hidden">
                         <div class="info-box explanation">
                             <strong>What this shows:</strong> Configuration profiles, compliance policies, and settings catalog items assigned to this device from Intune.<br>
                             <strong>Why it matters:</strong> These are the <em>intended</em> policies from your Intune tenant. Compare with "MDM Local State" above to verify they applied.
@@ -2705,11 +2716,11 @@
             if (total === 0) {
                 return `
                     <div class="section">
-                        <div class="section-header">
-                            <h2>GPO Comparison</h2>
+                        <div class="section-header collapsed">
+                            <h2>GPO Comparison - No Settings</h2>
                             <span class="toggle">&#9660;</span>
                         </div>
-                        <div class="section-body">
+                        <div class="section-body hidden">
                             <p style="color: var(--text-secondary);">No GPO settings to compare.</p>
                         </div>
                     </div>
@@ -2718,11 +2729,11 @@
 
             return `
                 <div class="section">
-                    <div class="section-header">
-                        <h2>GPO Comparison (${diff.identical.length} identical, ${diff.valueMismatch.length} mismatched, ${diff.uniqueToA.length} unique to A, ${diff.uniqueToB.length} unique to B)</h2>
+                    <div class="section-header collapsed">
+                        <h2>GPO Comparison - ${total} Settings (${diff.identical.length} Identical, ${diff.valueMismatch.length} Mismatched, ${diff.uniqueToA.length}/${diff.uniqueToB.length} Unique)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
-                    <div class="section-body">
+                    <div class="section-body hidden">
                         <div class="summary-grid">
                             <div class="summary-card green">
                                 <span class="number">${diff.identical.length}</span>
@@ -2806,11 +2817,11 @@
             if (total === 0) {
                 return `
                     <div class="section">
-                        <div class="section-header">
-                            <h2>MDM Comparison</h2>
+                        <div class="section-header collapsed">
+                            <h2>MDM Comparison - No Policies</h2>
                             <span class="toggle">&#9660;</span>
                         </div>
-                        <div class="section-body">
+                        <div class="section-body hidden">
                             <p style="color: var(--text-secondary);">No MDM policies to compare.</p>
                         </div>
                     </div>
@@ -2819,11 +2830,11 @@
 
             return `
                 <div class="section">
-                    <div class="section-header">
-                        <h2>MDM Comparison (${diff.identical.length} identical, ${diff.valueMismatch.length} mismatched, ${diff.uniqueToA.length} unique to A, ${diff.uniqueToB.length} unique to B)</h2>
+                    <div class="section-header collapsed">
+                        <h2>MDM Comparison - ${total} Policies (${diff.identical.length} Identical, ${diff.valueMismatch.length} Mismatched, ${diff.uniqueToA.length}/${diff.uniqueToB.length} Unique)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
-                    <div class="section-body">
+                    <div class="section-body hidden">
                         <div class="summary-grid">
                             <div class="summary-card green">
                                 <span class="number">${diff.identical.length}</span>
