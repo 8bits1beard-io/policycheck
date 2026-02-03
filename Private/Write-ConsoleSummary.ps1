@@ -22,16 +22,15 @@ function Write-ConsoleSummary {
     $s = $Analysis.Summary
 
     Write-Host ""
-    Write-Host "  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓" -ForegroundColor Cyan
-    Write-Host "  ┃  " -ForegroundColor Cyan -NoNewline
-    Write-Host "📊 POLICY CHECK RESULTS" -ForegroundColor White -NoNewline
-    Write-Host "                  ┃" -ForegroundColor Cyan
-    Write-Host "  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛" -ForegroundColor Cyan
+    Write-Host "  ┌──────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "  │  " -ForegroundColor Cyan -NoNewline
+    Write-Host "POLICY CHECK RESULTS" -ForegroundColor White -NoNewline
+    Write-Host "                    │" -ForegroundColor Cyan
+    Write-Host "  └──────────────────────────────────────────┘" -ForegroundColor Cyan
     Write-Host ""
 
     # --- Device Info ---
-    Write-Host "  📍 " -ForegroundColor Cyan -NoNewline
-    Write-Host "Device:  " -ForegroundColor Gray -NoNewline
+    Write-Host "  Device:     " -ForegroundColor Cyan -NoNewline
     Write-Host "$($GPOData.ComputerName)" -ForegroundColor White
     Write-Host "     Scanned: " -ForegroundColor DarkGray -NoNewline
     Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray

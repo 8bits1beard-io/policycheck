@@ -268,6 +268,29 @@
             color: var(--text-secondary);
         }
 
+        /* Category Dividers */
+        .category-divider {
+            display: flex;
+            align-items: center;
+            margin: 40px 0 20px 0;
+            gap: 15px;
+        }
+
+        .category-divider-line {
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+        }
+
+        .category-divider-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
         /* Collapsible Sections */
         .section {
             background: var(--bg-secondary);
@@ -364,6 +387,12 @@
 
         tr.status-mdm-only td {
             border-left: 3px solid var(--accent-blue);
+        }
+
+        tr.suggestion-row td {
+            padding: 0;
+            background: var(--bg-secondary);
+            border-left: 3px solid var(--accent-yellow);
         }
 
         /* Status badges in tables */
@@ -839,6 +868,227 @@
             color: var(--text-primary);
             font-size: 0.95rem;
         }
+
+        /* Mapping Suggestions */
+        .suggestions-banner {
+            background: rgba(229, 192, 123, 0.15);
+            border: 1px solid var(--accent-yellow);
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .suggestions-banner-icon {
+            font-size: 1.3rem;
+        }
+        .suggestions-banner-text {
+            flex: 1;
+            color: var(--text-primary);
+        }
+        .suggestions-banner strong {
+            color: var(--accent-yellow);
+        }
+
+        .suggestion-expand-btn {
+            background: none;
+            border: none;
+            color: var(--accent-cyan);
+            cursor: pointer;
+            padding: 2px 8px;
+            font-size: 0.85rem;
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+        .suggestion-expand-btn:hover {
+            color: var(--accent-blue);
+        }
+
+        .suggestions-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .suggestions-container.visible {
+            display: block;
+        }
+
+        .suggestion-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .suggestion-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .suggestion-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .confidence-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .confidence-badge.high {
+            background: rgba(107, 201, 107, 0.2);
+            color: var(--accent-green);
+        }
+        .confidence-badge.medium {
+            background: rgba(229, 192, 123, 0.2);
+            color: var(--accent-yellow);
+        }
+        .confidence-badge.low {
+            background: rgba(224, 108, 117, 0.2);
+            color: var(--accent-red);
+        }
+
+        .suggestion-setting-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .suggestion-details {
+            margin-left: 10px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .suggestion-csp-uri {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: var(--accent-cyan);
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .suggestion-reasons {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .suggestion-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-copy-mapping {
+            background: var(--accent-cyan);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-copy-mapping:hover {
+            background: var(--accent-blue);
+        }
+
+        .btn-view-code {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .btn-view-code:hover {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        /* Modal for code display */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        .modal-header h3 {
+            color: var(--accent-blue);
+            margin: 0;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+        .modal-close:hover {
+            color: var(--accent-red);
+        }
+        .code-block {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            overflow-x: auto;
+            margin-bottom: 15px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
     </style>
 </head>
 <body>
@@ -1077,26 +1327,62 @@
 
         // Single device rendering
         function renderSingleView(device) {
+            // Clear suggestion data from previous render
+            suggestionData = {};
+
             const container = document.getElementById('single-content');
             const name = device.device?.computerName || 'Unknown Device';
             const enrolled = device.mdmData?.IsEnrolled;
+            const domainJoined = device.device?.domainJoined ? 'Domain Joined' : 'Not Domain Joined';
+            const azureJoined = device.device?.azureADJoined ? 'Azure AD Joined' : 'Not Azure AD Joined';
 
             container.innerHTML = `
                 <div class="report-header">
                     <h1>${escapeHtml(name)}
                         ${enrolled ? '<span class="badge badge-enrolled">MDM Enrolled</span>' : '<span class="badge badge-not-enrolled">Not Enrolled</span>'}
                     </h1>
-                    <div class="subtitle">Exported: ${device.exportedAt ? formatDate(device.exportedAt) : 'Unknown'} | OS: ${escapeHtml(device.device?.osVersion || 'Unknown')}</div>
+                    <div class="subtitle">
+                        Exported: ${device.exportedAt ? formatDate(device.exportedAt) : 'Unknown'} |
+                        OS: ${escapeHtml(device.device?.osVersion || 'Unknown')} |
+                        ${domainJoined} | ${azureJoined}
+                    </div>
                 </div>
                 ${renderSummaryCards(device)}
                 ${renderCallouts(device)}
-                ${renderOverlapSection(device)}
-                ${renderProfilesSection(device)}
-                ${renderAppsSection(device)}
-                ${renderGroupsSection(device)}
+
+                <div class="category-divider">
+                    <div class="category-divider-line"></div>
+                    <div class="category-divider-text">Policies Currently Applied to This Device</div>
+                    <div class="category-divider-line"></div>
+                </div>
+                <div class="info-box explanation" style="margin-bottom: 20px;">
+                    The sections below show policies and configurations that are <strong>actively applied</strong> on this device right now.
+                </div>
                 ${renderGPOSection(device)}
                 ${renderMDMSection(device)}
                 ${renderSCCMSection(device)}
+
+                <div class="category-divider">
+                    <div class="category-divider-line"></div>
+                    <div class="category-divider-text">Policies & Apps Assigned from Intune</div>
+                    <div class="category-divider-line"></div>
+                </div>
+                <div class="info-box explanation" style="margin-bottom: 20px;">
+                    The sections below show what is <strong>assigned</strong> to this device from your Intune tenant (requires -IncludeGraph scan).
+                </div>
+                ${renderProfilesSection(device)}
+                ${renderAppsSection(device)}
+                ${renderGroupsSection(device)}
+
+                <div class="category-divider">
+                    <div class="category-divider-line"></div>
+                    <div class="category-divider-text">Analysis & Insights</div>
+                    <div class="category-divider-line"></div>
+                </div>
+                <div class="info-box explanation" style="margin-bottom: 20px;">
+                    Cross-reference analysis to identify conflicts, migration opportunities, and policy overlap between GPO and Intune.
+                </div>
+                ${renderOverlapSection(device)}
             `;
 
             initCollapsibles();
@@ -1214,12 +1500,13 @@
             return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>GPO Registry Settings (${settings.length})</h2>
+                        <h2>Group Policy (GPO) - Registry Settings (${settings.length})</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
                         <div class="info-box explanation">
-                            Registry-based policies detected from Group Policy. Review these when planning migration to Intune.
+                            <strong>What this shows:</strong> Registry-based policies currently applied from Active Directory Group Policy Objects.<br>
+                            <strong>Why it matters:</strong> These settings are managed via GPO. When migrating to Intune, you'll need to recreate equivalent policies.
                         </div>
                         <div class="filter-bar">
                             <input type="text" id="gpo-search" placeholder="Search GPO settings..." oninput="filterTable('gpo-table', 'gpo-search')">
@@ -1312,12 +1599,13 @@
             return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>MDM Settings</h2>
+                        <h2>MDM/Intune - Local Device State</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
                         <div class="info-box explanation">
-                            Policies currently applied to this device via Intune/MDM enrollment.
+                            <strong>What this shows:</strong> Policies currently enforced on this device by Intune (read from local PolicyManager registry).<br>
+                            <strong>Why it matters:</strong> This is what Intune has successfully applied to the device. Compare with "Assigned" policies below to see if everything landed.
                         </div>
                         ${enrollmentHtml}
                         ${policiesHtml}
@@ -1349,7 +1637,8 @@
 
             let clientHtml = `
                 <div class="info-box explanation">
-                    Configuration Manager client data - applications, compliance baselines, and software updates managed by SCCM.
+                    <strong>What this shows:</strong> Applications and baselines managed by Configuration Manager (SCCM).<br>
+                    <strong>Why it matters:</strong> If migrating away from SCCM, you'll need to move these apps to Intune or another deployment method.
                 </div>
                 <h3 style="margin-bottom: 10px; color: var(--text-secondary);">Client Information</h3>
                 <div class="enrollment-grid">
@@ -1473,6 +1762,8 @@
 
         function renderOverlapSection(device) {
             const overlap = device.analysis?.DetailedResults || [];
+            const mappingSuggestions = device.mappingSuggestions || [];
+
             if (overlap.length === 0) {
                 return `
                     <div class="section">
@@ -1487,16 +1778,44 @@
                 `;
             }
 
+            // Build suggestions lookup by GPO path+valuename
+            const suggestionsMap = new Map();
+            mappingSuggestions.forEach(s => {
+                const key = `${s.GPOPath}|${s.GPOValueName}`;
+                if (!suggestionsMap.has(key)) {
+                    suggestionsMap.set(key, []);
+                }
+                suggestionsMap.get(key).push(...(s.Matches || []));
+            });
+
+            // Count high confidence suggestions
+            const highConfidenceSuggestions = mappingSuggestions.filter(s =>
+                (s.Matches || []).some(m => m.Confidence === 'High')
+            ).length;
+
+            // Build suggestions banner
+            const suggestionsBanner = mappingSuggestions.length > 0 ? `
+                <div class="suggestions-banner">
+                    <span class="suggestions-banner-icon">💡</span>
+                    <div class="suggestions-banner-text">
+                        <strong>${highConfidenceSuggestions} high-confidence</strong> mapping suggestions found for unmapped GPO settings.
+                        ${mappingSuggestions.length > highConfidenceSuggestions ? ` (${mappingSuggestions.length - highConfidenceSuggestions} additional medium/low confidence)` : ''}
+                    </div>
+                </div>
+            ` : '';
+
             return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>Overlap Analysis (${overlap.length})</h2>
+                        <h2>GPO vs Intune Overlap Analysis (${overlap.length} settings)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
                         <div class="info-box explanation">
-                            Compare GPO settings against Intune policies. <strong>Conflicts</strong> need resolution. <strong>Migration Ready</strong> settings can be moved to Intune.
+                            <strong>What this shows:</strong> Compares each GPO registry setting against Intune/MDM to identify overlaps and conflicts.<br>
+                            <strong>Why it matters:</strong> Find settings configured in both places (conflicts), or GPO settings ready to migrate to Intune.
                         </div>
+                        ${suggestionsBanner}
                         <div class="legend-box">
                             <div class="legend-item">
                                 <span class="legend-color match"></span>
@@ -1537,7 +1856,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${overlap.map(o => {
+                                    ${overlap.map((o, idx) => {
                                         let rowClass = '';
                                         let statusClass = '';
                                         let statusText = '';
@@ -1559,20 +1878,38 @@
                                         } else if (o.Status === 'GPOOnly_NoMapping') {
                                             rowClass = 'status-gpo-nomapping';
                                             statusClass = 'no-mapping';
-                                            statusText = 'No Mapping';
+
+                                            // Check for suggestions
+                                            const suggestionKey = `${o.GPOPath}|${o.GPOValueName}`;
+                                            const suggestions = suggestionsMap.get(suggestionKey) || [];
+
+                                            if (suggestions.length > 0) {
+                                                statusText = `No Mapping (${suggestions.length} suggestion${suggestions.length > 1 ? 's' : ''})`;
+                                            } else {
+                                                statusText = 'No Mapping';
+                                            }
                                         }
 
                                         const mdmSetting = o.MDMArea && o.MDMSetting ? `${o.MDMArea}/${o.MDMSetting}` : '-';
+
+                                        // Check for suggestions for this setting
+                                        const suggestionKey = `${o.GPOPath}|${o.GPOValueName}`;
+                                        const suggestions = suggestionsMap.get(suggestionKey) || [];
+                                        const suggestionContent = suggestions.length > 0 ? renderSuggestions(o, suggestions, idx) : '';
 
                                         return `
                                             <tr class="${rowClass}" data-status="${o.Status}">
                                                 <td><span class="status-tag ${statusClass}">${statusText}</span></td>
                                                 <td>${escapeHtml(o.Category || '-')}</td>
-                                                <td>${escapeHtml(o.GPOValueName || '-')}</td>
+                                                <td>
+                                                    ${escapeHtml(o.GPOValueName || '-')}
+                                                    ${suggestions.length > 0 ? `<br><button class="suggestion-expand-btn" onclick="toggleSuggestions('suggestion-${idx}', event)">View Suggestions</button>` : ''}
+                                                </td>
                                                 <td>${escapeHtml(formatValue(o.GPOValue))}</td>
                                                 <td>${escapeHtml(mdmSetting)}</td>
                                                 <td>${escapeHtml(formatValue(o.MDMValue))}</td>
                                             </tr>
+                                            ${suggestionContent}
                                         `;
                                     }).join('')}
                                 </tbody>
@@ -1659,10 +1996,14 @@
             return `
                 <div class="section">
                     <div class="section-header collapsed">
-                        <h2>Intune App Assignments (${applicableApps.length} of ${allApps.length})</h2>
+                        <h2>Intune Application Assignments (${applicableApps.length} of ${allApps.length})</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
+                        <div class="info-box explanation">
+                            <strong>What this shows:</strong> Applications assigned to this device from Intune (Required or Available).<br>
+                            <strong>Why it matters:</strong> Shows what apps users should be able to install, or what apps are required on this device.
+                        </div>
                         ${infoMessage}
                         ${requiredApps.length > 0 ? `
                             <h3 style="margin: 15px 0 10px; color: var(--accent-yellow);">Required Apps (${requiredApps.length})</h3>
@@ -1759,10 +2100,14 @@
             return `
                 <div class="section">
                     <div class="section-header collapsed">
-                        <h2>Azure AD Device & Group Memberships (${groups.length} groups)</h2>
+                        <h2>Azure AD Group Memberships (${groups.length} groups)</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
+                        <div class="info-box explanation">
+                            <strong>What this shows:</strong> Azure AD groups this device is a member of (Dynamic and Assigned).<br>
+                            <strong>Why it matters:</strong> Group memberships determine which Intune policies and apps are assigned to this device.
+                        </div>
                         ${deviceInfo ? `
                             <div class="enrollment-grid">
                                 <div class="enrollment-item"><div class="key">Display Name</div><div class="value">${escapeHtml(deviceInfo.DisplayName || '-')}</div></div>
@@ -1954,10 +2299,14 @@
             return `
                 <div class="section">
                     <div class="section-header">
-                        <h2>Intune Policies Assigned to Device (${applicableCount} of ${totalCount})</h2>
+                        <h2>Intune Configuration Profiles (${applicableCount} of ${totalCount})</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body">
+                        <div class="info-box explanation">
+                            <strong>What this shows:</strong> Configuration profiles, compliance policies, and settings catalog items assigned to this device from Intune.<br>
+                            <strong>Why it matters:</strong> These are the <em>intended</em> policies from your Intune tenant. Compare with "MDM Local State" above to verify they applied.
+                        </div>
                         ${infoMessage}
                         ${profilesHtml}
                         ${complianceHtml}
@@ -2416,6 +2765,169 @@
                 return isoString;
             }
         }
+
+        // Store suggestion data globally for access
+        let suggestionData = {};
+
+        // Mapping Suggestions Functions
+        function renderSuggestions(overlapItem, suggestions, rowIdx) {
+            const suggestionRows = suggestions.map((match, matchIdx) => {
+                const confidence = match.Confidence || 'Medium';
+                const confidenceClass = confidence.toLowerCase();
+                const confidenceIcon = confidence === 'High' ? '🟢' : confidence === 'Medium' ? '🟡' : '🔴';
+                const score = match.Score ? ` (${Math.round(match.Score)}%)` : '';
+                const setting = match.Setting || {};
+                const displayName = setting.DisplayName || 'Unknown Setting';
+                const cspUri = setting.FullCspUri || '';
+                const strategies = (match.Strategies || []).join(', ');
+                const reasons = (match.Reasons || []).join('; ');
+
+                // Store data for later access
+                const dataKey = `${rowIdx}-${matchIdx}`;
+                suggestionData[dataKey] = { overlapItem, match };
+
+                return `
+                    <div class="suggestion-item">
+                        <div class="suggestion-header">
+                            <span class="confidence-badge ${confidenceClass}">${confidenceIcon} ${confidence}${score}</span>
+                            <span class="suggestion-setting-name">${escapeHtml(displayName)}</span>
+                        </div>
+                        <div class="suggestion-details">
+                            <div class="suggestion-csp-uri">${escapeHtml(cspUri)}</div>
+                            ${strategies ? `<div class="suggestion-reasons"><strong>Match Strategy:</strong> ${escapeHtml(strategies)}</div>` : ''}
+                            ${reasons ? `<div class="suggestion-reasons"><strong>Reason:</strong> ${escapeHtml(reasons)}</div>` : ''}
+                        </div>
+                        <div class="suggestion-actions">
+                            <button class="btn-copy-mapping" onclick="copyMappingToClipboard('${dataKey}', event)">Quick Copy</button>
+                            <button class="btn-view-code" onclick="showMappingCode('${dataKey}', event)">View Code</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <tr id="suggestion-${rowIdx}" class="suggestion-row" style="display: none;">
+                    <td colspan="6">
+                        <div class="suggestions-container visible">
+                            ${suggestionRows}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function toggleSuggestions(id, event) {
+            event.stopPropagation();
+            const row = document.getElementById(id);
+            if (row) {
+                row.style.display = row.style.display === 'none' ? '' : 'none';
+            }
+        }
+
+        function generateSettingsMapEntry(overlapItem, match) {
+            const setting = match.Setting || {};
+            const confidence = match.Confidence || 'Medium';
+            const gpoPath = (overlapItem.GPOPath || '').replace(/\\/g, '\\\\');
+            const cspUri = setting.FullCspUri || '';
+
+            // Extract MDM area and setting from CSP URI
+            let mdmArea = '';
+            let mdmSetting = '';
+            if (cspUri) {
+                const parts = cspUri.split('/');
+                if (parts.length >= 2) {
+                    mdmArea = parts[parts.length - 2];
+                    mdmSetting = parts[parts.length - 1];
+                }
+            }
+
+            const note = confidence === 'High' ? 'AI-suggested mapping - High confidence' :
+                         confidence === 'Medium' ? 'AI-suggested mapping - Review recommended' :
+                         'AI-suggested mapping - Low confidence, verify carefully';
+
+            return `@{
+    GPOPathPattern = '${gpoPath}'
+    GPODescription = '${escapeHtml(overlapItem.GPOValueName || '')}'
+    MDMArea        = '${mdmArea}'
+    MDMSetting     = '${mdmSetting}'
+    CSPURI         = '${cspUri}'
+    Notes          = '${note}'
+}`;
+        }
+
+        function copyMappingToClipboard(dataKey, event) {
+            event.stopPropagation();
+            const data = suggestionData[dataKey];
+            if (!data) return;
+
+            const code = generateSettingsMapEntry(data.overlapItem, data.match);
+
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                btn.style.background = 'var(--accent-green)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy to clipboard: ' + err);
+            });
+        }
+
+        function showMappingCode(dataKey, event) {
+            event.stopPropagation();
+            const data = suggestionData[dataKey];
+            if (!data) return;
+
+            const code = generateSettingsMapEntry(data.overlapItem, data.match);
+            document.getElementById('mappingCode').textContent = code;
+            document.getElementById('mappingModal').classList.add('active');
+        }
+
+        function closeMappingModal() {
+            document.getElementById('mappingModal').classList.remove('active');
+        }
+
+        function copyModalCode() {
+            const code = document.getElementById('mappingCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                btn.style.background = 'var(--accent-green)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy to clipboard: ' + err);
+            });
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('mappingModal');
+            if (event.target === modal) {
+                closeMappingModal();
+            }
+        }
     </script>
+
+    <!-- Modal for SettingsMap Code -->
+    <div id="mappingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>SettingsMap.psd1 Entry</h3>
+                <button class="modal-close" onclick="closeMappingModal()">&times;</button>
+            </div>
+            <div class="code-block" id="mappingCode"></div>
+            <div class="modal-actions">
+                <button class="btn-copy-mapping" onclick="copyModalCode()">Copy to Clipboard</button>
+                <button class="btn-view-code" onclick="closeMappingModal()">Close</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
