@@ -113,7 +113,17 @@ function Get-GPOPolicyData {
         }
     }
 
-    # --- 2. Enumerate registry-based policies ---
+    # --- 2. Get RSoP source attribution ---
+    $rsopLookup = @{}
+    try {
+        $rsopLookup = Get-RSoPPolicySource
+        Write-Verbose "Got RSoP source data for $($rsopLookup.Count) settings"
+    }
+    catch {
+        Write-Verbose "Could not get RSoP source data: $_. Source GPO will be unknown for registry policies."
+    }
+
+    # --- 3. Enumerate registry-based policies ---
     $categoryMap = @{
         'FVE'                                             = 'BitLocker'
         'WindowsUpdate'                                   = 'Windows Update'
@@ -180,6 +190,14 @@ function Get-GPOPolicyData {
                         }
                     }
 
+                    # Look up source GPO from RSoP data
+                    # RSoP uses "Machine"/"User" scope and full registry path
+                    $rsopScope = if ($regEntry.Scope -eq 'Computer') { 'Machine' } else { 'User' }
+                    # RSoP registry key is like "SOFTWARE\Policies\Microsoft\..." (without HKEY_ prefix)
+                    $rsopRegKey = $key.Name -replace '^HKEY_LOCAL_MACHINE\\', '' -replace '^HKEY_CURRENT_USER\\', ''
+                    $rsopLookupKey = "$rsopScope|$rsopRegKey|$($_.Name)"
+                    $sourceInfo = $rsopLookup[$rsopLookupKey]
+
                     $registryPolicies += [PSCustomObject]@{
                         Path      = $relativePath
                         ValueName = $_.Name
@@ -188,6 +206,8 @@ function Get-GPOPolicyData {
                         Scope     = $regEntry.Scope
                         Category  = $category
                         FullPath  = $key.Name
+                        SourceGPO = if ($sourceInfo) { $sourceInfo.SourceGPO } else { $null }
+                        SourceOU  = if ($sourceInfo) { $sourceInfo.SOMID } else { $null }
                     }
                 }
             }

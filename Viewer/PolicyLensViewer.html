@@ -1520,6 +1520,7 @@
                                         <th>Value Name</th>
                                         <th>Value</th>
                                         <th>Scope</th>
+                                        <th>Source GPO</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1530,6 +1531,7 @@
                                             <td>${escapeHtml(s.ValueName || '')}</td>
                                             <td>${escapeHtml(formatValue(s.Data))}</td>
                                             <td>${escapeHtml(s.Scope || '')}</td>
+                                            <td style="font-size: 0.85rem;">${s.SourceGPO ? `<span class="status-tag mdm-only">${escapeHtml(s.SourceGPO)}</span>` : '<span style="color: var(--text-secondary);">-</span>'}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>

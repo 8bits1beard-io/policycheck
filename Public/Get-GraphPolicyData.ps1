@@ -85,9 +85,19 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
 
         $profiles = @(foreach ($config in $allConfigs) {
             $assignments = @($config.assignments | Where-Object { $_ } | ForEach-Object {
+                $target = $_.target
+                $targetLabel = switch ($target.'@odata.type') {
+                    '#microsoft.graph.allDevicesAssignmentTarget'       { 'All Devices' }
+                    '#microsoft.graph.allLicensedUsersAssignmentTarget' { 'All Users' }
+                    '#microsoft.graph.groupAssignmentTarget'            { "Group: $($target.groupId)" }
+                    '#microsoft.graph.exclusionGroupAssignmentTarget'   { "Exclude: $($target.groupId)" }
+                    default { $target.'@odata.type' -replace '#microsoft\.graph\.' }
+                }
                 [PSCustomObject]@{
-                    TargetType = $_.target.'@odata.type'
-                    GroupId    = $_.target.groupId
+                    TargetType = $targetLabel
+                    GroupId    = $target.groupId
+                    FilterId   = $target.deviceAndAppManagementAssignmentFilterId
+                    FilterType = $target.deviceAndAppManagementAssignmentFilterType
                 }
             })
 
@@ -125,9 +135,19 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
 
         $compliancePolicies = @(foreach ($policy in $allPolicies) {
             $assignments = @($policy.assignments | Where-Object { $_ } | ForEach-Object {
+                $target = $_.target
+                $targetLabel = switch ($target.'@odata.type') {
+                    '#microsoft.graph.allDevicesAssignmentTarget'       { 'All Devices' }
+                    '#microsoft.graph.allLicensedUsersAssignmentTarget' { 'All Users' }
+                    '#microsoft.graph.groupAssignmentTarget'            { "Group: $($target.groupId)" }
+                    '#microsoft.graph.exclusionGroupAssignmentTarget'   { "Exclude: $($target.groupId)" }
+                    default { $target.'@odata.type' -replace '#microsoft\.graph\.' }
+                }
                 [PSCustomObject]@{
-                    TargetType = $_.target.'@odata.type'
-                    GroupId    = $_.target.groupId
+                    TargetType = $targetLabel
+                    GroupId    = $target.groupId
+                    FilterId   = $target.deviceAndAppManagementAssignmentFilterId
+                    FilterType = $target.deviceAndAppManagementAssignmentFilterType
                 }
             })
 
@@ -163,9 +183,19 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
 
         $settingsCatalog = @(foreach ($policy in $allCatalog) {
             $assignments = @($policy.assignments | Where-Object { $_ } | ForEach-Object {
+                $target = $_.target
+                $targetLabel = switch ($target.'@odata.type') {
+                    '#microsoft.graph.allDevicesAssignmentTarget'       { 'All Devices' }
+                    '#microsoft.graph.allLicensedUsersAssignmentTarget' { 'All Users' }
+                    '#microsoft.graph.groupAssignmentTarget'            { "Group: $($target.groupId)" }
+                    '#microsoft.graph.exclusionGroupAssignmentTarget'   { "Exclude: $($target.groupId)" }
+                    default { $target.'@odata.type' -replace '#microsoft\.graph\.' }
+                }
                 [PSCustomObject]@{
-                    TargetType = $_.target.'@odata.type'
-                    GroupId    = $_.target.groupId
+                    TargetType = $targetLabel
+                    GroupId    = $target.groupId
+                    FilterId   = $target.deviceAndAppManagementAssignmentFilterId
+                    FilterType = $target.deviceAndAppManagementAssignmentFilterType
                 }
             })
 
