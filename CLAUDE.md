@@ -9,20 +9,23 @@ PolicyLens is a PowerShell module that scans Windows devices for applied Group P
 ## Running the Tool
 
 ```powershell
-# Import the module and run a basic local scan
+# Import the module and run a full scan (Graph API + verification by default)
 Import-Module .\PolicyLens.psd1
 Invoke-PolicyLens
 
 # Or use the wrapper script
 .\PolicyLens.ps1
 
-# With Graph API (Intune profiles, apps, groups)
-Invoke-PolicyLens -IncludeGraph
+# Skip Intune/Graph queries (local-only scan)
+Invoke-PolicyLens -SkipIntune
+
+# Skip deployment verification only
+Invoke-PolicyLens -SkipVerify
 
 # With mapping suggestions for unmapped GPO settings
-Invoke-PolicyLens -IncludeGraph -SuggestMappings
+Invoke-PolicyLens -SuggestMappings
 
-# Remote scan via WinRM
+# Remote scan via WinRM (includes Graph by default)
 Invoke-PolicyLens -ComputerName SERVER1
 
 # Export to specific path
@@ -58,6 +61,7 @@ PolicyLens/
 - `Get-GraphPolicyData` - Fetches Intune profiles via Microsoft Graph
 - `Get-DeviceAppAssignments` - Gets Intune app assignments via Graph
 - `Get-DeviceGroupMemberships` - Gets Azure AD group memberships via Graph
+- `Get-DeviceDeploymentStatus` - Verifies deployment status of assigned policies via Graph
 - `Get-SettingsCatalogMappings` - Fetches Intune Settings Catalog definitions via Graph (cached)
 - `Compare-PolicyOverlap` - Cross-references GPO settings against MDM using SettingsMap
 

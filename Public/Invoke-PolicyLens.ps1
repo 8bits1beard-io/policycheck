@@ -4,8 +4,10 @@ function Invoke-PolicyLens {
         Runs a full policy scan on the local or remote device.
     .DESCRIPTION
         Orchestrates collection of Group Policy data, MDM/Intune policy data,
-        SCCM/ConfigMgr data, and optionally Microsoft Graph API data. Performs
-        overlap analysis and exports results to JSON for the web viewer tool.
+        SCCM/ConfigMgr data, and Microsoft Graph API data. Performs overlap analysis,
+        verifies deployment status, and exports results to JSON for the web viewer tool.
+        By default, queries Graph API for Intune profiles, apps, groups, and deployment
+        verification. Use -SkipIntune or -SkipVerify to disable these features.
         When scanning remote machines, device data is collected via WinRM while
         Graph API calls run locally for simpler authentication.
     .PARAMETER ComputerName
@@ -13,35 +15,40 @@ function Invoke-PolicyLens {
     .PARAMETER Credential
         PSCredential object for authenticating to the remote computer. If not specified,
         uses the current user's credentials.
-    .PARAMETER IncludeGraph
-        Connect to Microsoft Graph API to retrieve Intune profile metadata,
-        app assignments, and Azure AD group memberships.
+    .PARAMETER SkipIntune
+        Skip Microsoft Graph API queries for Intune profiles, apps, and group memberships.
+        Use this for offline scans or when Graph authentication is not available.
+    .PARAMETER SkipVerify
+        Skip deployment verification that checks whether assigned policies are actually
+        applied to the device. Verification is enabled by default.
     .PARAMETER TenantId
         Azure AD tenant ID for Graph authentication.
     .PARAMETER SkipMDMDiag
         Skip running mdmdiagnosticstool (can be slow on some devices).
+    .PARAMETER SuggestMappings
+        Find Intune Settings Catalog matches for unmapped GPO settings.
     .PARAMETER OutputPath
         Path for the JSON export file. Defaults to a timestamped file in the current directory.
     .PARAMETER LogPath
         Path for the operational log file. Defaults to PolicyLens.log in LocalAppData.
     .EXAMPLE
         Invoke-PolicyLens
-        Runs a local-only scan and exports results to JSON.
+        Runs a full scan with Graph API and deployment verification (default).
+    .EXAMPLE
+        Invoke-PolicyLens -SkipIntune
+        Runs a local-only scan without Graph API queries.
+    .EXAMPLE
+        Invoke-PolicyLens -SkipVerify
+        Runs a scan with Graph API but skips deployment verification.
     .EXAMPLE
         Invoke-PolicyLens -ComputerName SERVER1
-        Runs a remote scan on SERVER1 using current credentials.
+        Runs a remote scan on SERVER1 with Graph API queries.
     .EXAMPLE
-        Invoke-PolicyLens -ComputerName SERVER1 -Credential (Get-Credential)
-        Runs a remote scan on SERVER1 with explicit credentials.
-    .EXAMPLE
-        Invoke-PolicyLens -ComputerName SERVER1 -IncludeGraph
-        Runs a remote scan with Graph API queries (auth happens locally).
-    .EXAMPLE
-        Invoke-PolicyLens -IncludeGraph -TenantId "contoso.onmicrosoft.com"
-        Runs a full scan including Graph API queries for Intune metadata.
+        Invoke-PolicyLens -ComputerName SERVER1 -SkipIntune
+        Runs a remote scan on SERVER1 without Graph API queries.
     .EXAMPLE
         Invoke-PolicyLens -OutputPath "C:\Reports\device1.json"
-        Runs a local scan and exports results to a specific path.
+        Runs a full scan and exports results to a specific path.
     .OUTPUTS
         PSCustomObject with all collected data and analysis results.
     #>
@@ -51,7 +58,9 @@ function Invoke-PolicyLens {
 
         [PSCredential]$Credential,
 
-        [switch]$IncludeGraph,
+        [switch]$SkipIntune,
+
+        [switch]$SkipVerify,
 
         [string]$TenantId,
 
@@ -59,20 +68,18 @@ function Invoke-PolicyLens {
 
         [switch]$SuggestMappings,
 
-        [switch]$VerifyDeployment,
-
         [string]$OutputPath,
 
         [string]$LogPath = "$env:LOCALAPPDATA\PolicyLens\PolicyLens.log"
     )
 
+    # Derive internal flags from skip parameters
+    $IncludeGraph = -not $SkipIntune
+    $VerifyDeployment = -not $SkipVerify -and -not $SkipIntune  # Verification requires Graph
+
     # Validate parameters
-    if ($SuggestMappings -and -not $IncludeGraph) {
-        Write-Error "-SuggestMappings requires -IncludeGraph to query Settings Catalog via Graph API"
-        return
-    }
-    if ($VerifyDeployment -and -not $IncludeGraph) {
-        Write-Error "-VerifyDeployment requires -IncludeGraph to query deployment status via Graph API"
+    if ($SuggestMappings -and $SkipIntune) {
+        Write-Error "-SuggestMappings requires Graph API. Remove -SkipIntune to use this feature."
         return
     }
 
@@ -106,7 +113,7 @@ function Invoke-PolicyLens {
     # --- Start logging ---
     Write-PolicyLensLog "========================================" -Level Info
     Write-PolicyLensLog "PolicyLens started (v1.2.0)" -Level Info
-    $logParams = "IncludeGraph=$IncludeGraph, SkipMDMDiag=$SkipMDMDiag"
+    $logParams = "SkipIntune=$SkipIntune, SkipVerify=$SkipVerify, SkipMDMDiag=$SkipMDMDiag"
     if ($isRemoteScan) { $logParams += ", ComputerName=$ComputerName" }
     Write-PolicyLensLog "Parameters: $logParams" -Level Info
 

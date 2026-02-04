@@ -4,23 +4,25 @@
 .DESCRIPTION
     Scans a Windows device for applied Group Policies, Intune/MDM policies,
     and SCCM configurations. Provides visibility into policy sources, analyzes overlap,
-    and exports results to JSON for the web viewer tool. Supports both local and
-    remote scanning via WinRM.
+    verifies deployment status, and exports results to JSON for the web viewer tool.
+    By default, queries Graph API for Intune profiles, apps, groups, and deployment
+    verification. Use -SkipIntune or -SkipVerify to disable these features.
+    Supports both local and remote scanning via WinRM.
 .PARAMETER ComputerName
     Name of a remote computer to scan via WinRM. If not specified, scans the local machine.
 .PARAMETER Credential
     PSCredential object for authenticating to the remote computer. If not specified,
     uses the current user's credentials.
-.PARAMETER IncludeGraph
-    Connect to Microsoft Graph API to retrieve Intune profile metadata,
-    app assignments, and Azure AD group memberships.
+.PARAMETER SkipIntune
+    Skip Microsoft Graph API queries for Intune profiles, apps, and group memberships.
+    Use this for offline scans or when Graph authentication is not available.
+.PARAMETER SkipVerify
+    Skip deployment verification that checks whether assigned policies are actually
+    applied to the device. Verification is enabled by default.
 .PARAMETER TenantId
     Azure AD tenant ID or domain for Graph authentication (e.g., "contoso.onmicrosoft.com").
 .PARAMETER SuggestMappings
-    Find Intune Settings Catalog matches for unmapped GPO settings (requires -IncludeGraph).
-.PARAMETER VerifyDeployment
-    Query Graph API for device-specific deployment status to verify if assigned policies
-    are actually applied on the device (requires -IncludeGraph).
+    Find Intune Settings Catalog matches for unmapped GPO settings.
 .PARAMETER SkipMDMDiag
     Skip running mdmdiagnosticstool (can be slow on some devices).
 .PARAMETER OutputPath
@@ -29,30 +31,30 @@
     Path for the operational log file. Defaults to PolicyLens.log in LocalAppData.
 .EXAMPLE
     .\PolicyLens.ps1
-    Runs a local-only scan and exports results to JSON.
+    Runs a full scan with Graph API and deployment verification (default).
+.EXAMPLE
+    .\PolicyLens.ps1 -SkipIntune
+    Runs a local-only scan without Graph API queries.
+.EXAMPLE
+    .\PolicyLens.ps1 -SkipVerify
+    Runs a scan with Graph API but skips deployment verification.
 .EXAMPLE
     .\PolicyLens.ps1 -ComputerName SERVER1
-    Runs a remote scan on SERVER1 using current credentials.
+    Runs a remote scan on SERVER1 with Graph API queries.
 .EXAMPLE
-    .\PolicyLens.ps1 -ComputerName SERVER1 -Credential (Get-Credential)
-    Runs a remote scan on SERVER1 with explicit credentials.
-.EXAMPLE
-    .\PolicyLens.ps1 -ComputerName SERVER1 -IncludeGraph
-    Runs a remote scan with Graph API queries (auth happens locally).
-.EXAMPLE
-    .\PolicyLens.ps1 -IncludeGraph
-    Runs a full scan with Graph API queries (browser auth prompt).
+    .\PolicyLens.ps1 -ComputerName SERVER1 -SkipIntune
+    Runs a remote scan on SERVER1 without Graph API queries.
 .EXAMPLE
     .\PolicyLens.ps1 -OutputPath "C:\Reports\device1.json"
-    Runs a local scan and exports results to a specific path.
+    Runs a full scan and exports results to a specific path.
 #>
 [CmdletBinding()]
 param(
     [string]$ComputerName,
     [PSCredential]$Credential,
-    [switch]$IncludeGraph,
+    [switch]$SkipIntune,
+    [switch]$SkipVerify,
     [switch]$SuggestMappings,
-    [switch]$VerifyDeployment,
     [string]$TenantId,
     [switch]$SkipMDMDiag,
     [string]$OutputPath,
@@ -69,9 +71,9 @@ Import-Module "$PSScriptRoot\PolicyLens.psd1" -Force
 $params = @{}
 if ($ComputerName) { $params['ComputerName'] = $ComputerName }
 if ($Credential) { $params['Credential'] = $Credential }
-if ($IncludeGraph) { $params['IncludeGraph'] = $true }
+if ($SkipIntune) { $params['SkipIntune'] = $true }
+if ($SkipVerify) { $params['SkipVerify'] = $true }
 if ($SuggestMappings) { $params['SuggestMappings'] = $true }
-if ($VerifyDeployment) { $params['VerifyDeployment'] = $true }
 if ($TenantId) { $params['TenantId'] = $TenantId }
 if ($SkipMDMDiag) { $params['SkipMDMDiag'] = $true }
 if ($OutputPath) { $params['OutputPath'] = $OutputPath }
