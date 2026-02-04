@@ -1829,16 +1829,6 @@
             const mdm = device.mdmData || {};
             const enrollments = mdm.Enrollments || [];
             const isEnrolled = mdm.IsEnrolled;
-            // Use IntunePolicies (only Intune-configured) as primary, fall back to DevicePolicies for older exports
-            const intunePolicies = mdm.IntunePolicies || [];
-            const devicePolicies = mdm.DevicePolicies || [];
-            const userPolicies = mdm.UserPolicies || [];
-            const totalCSPCount = mdm.TotalCSPValueCount || (devicePolicies.length + userPolicies.length);
-
-            // If we have IntunePolicies, use that; otherwise fall back to legacy DevicePolicies
-            const hasNewFormat = intunePolicies.length > 0 || mdm.IntunePolicyCount !== undefined;
-            const displayPolicies = hasNewFormat ? intunePolicies : [...devicePolicies, ...userPolicies];
-            const policyCount = hasNewFormat ? (mdm.IntunePolicyCount || intunePolicies.length) : displayPolicies.length;
 
             // Calculate sync status
             const lastSyncTime = mdm.LastSyncTime ? new Date(mdm.LastSyncTime) : null;
@@ -1883,63 +1873,23 @@
                     ${syncStatusHtml}
                 `;
             } else {
-                enrollmentHtml = '<div class="info-box warning">Device is not MDM enrolled</div>';
-            }
-
-            let policiesHtml = '';
-            if (displayPolicies.length > 0) {
-                const countLabel = hasNewFormat && totalCSPCount > 0
-                    ? `Intune-Configured Policies (${policyCount} of ${totalCSPCount} total CSP values)`
-                    : `MDM Policies (${policyCount})`;
-                policiesHtml = `
-                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">${countLabel}</h3>
-                    ${hasNewFormat ? `<div class="info-box info" style="margin-bottom: 10px;">Showing only policies explicitly configured by Intune. ${totalCSPCount - policyCount} default/system CSP values are hidden.</div>` : ''}
-                    <div class="filter-bar">
-                        <input type="text" id="mdm-search" placeholder="Search MDM policies..." oninput="filterTable('mdm-table', 'mdm-search')">
-                    </div>
-                    <div class="table-wrapper">
-                        <table id="mdm-table">
-                            <thead>
-                                <tr>
-                                    <th>Area</th>
-                                    <th>Setting</th>
-                                    <th>Value</th>
-                                    <th>Scope</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${displayPolicies.map(p => `
-                                    <tr>
-                                        <td>${escapeHtml(p.Area || '')}</td>
-                                        <td>${escapeHtml(p.Setting || '')}</td>
-                                        <td>${escapeHtml(formatValue(p.Value))}</td>
-                                        <td>${escapeHtml(p.Scope || '')}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            } else if (isEnrolled) {
-                policiesHtml = `<div class="info-box info" style="margin-top: 15px;">No Intune-configured policies found on this device.</div>`;
+                enrollmentHtml = '<div class="info-box warning">Device is not MDM enrolled. Intune policies cannot apply until the device is enrolled.</div>';
             }
 
             const enrolledStatus = isEnrolled ? 'Enrolled' : 'Not Enrolled';
-            const policyLabel = hasNewFormat ? `${policyCount} Intune Policies Applied` : 'Legacy Format';
 
             return `
-                <div class="section" id="section-mdm">
+                <div class="section" id="section-enrollment">
                     <div class="section-header collapsed">
-                        <h2>MDM/Intune - ${enrolledStatus}, ${policyLabel}</h2>
+                        <h2>Intune Enrollment - ${enrolledStatus}</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
                         <div class="info-box explanation">
-                            <strong>What this shows:</strong> Policies explicitly configured by Intune on this device (read from local PolicyManager registry).<br>
-                            <strong>Why it matters:</strong> This is what Intune has successfully applied to the device. Compare with "Assigned" policies below to see if everything landed.
+                            <strong>What this shows:</strong> MDM enrollment status and sync health for this device.<br>
+                            <strong>Why it matters:</strong> The device must be enrolled and syncing for Intune policies to apply. See "Intune Policies Assigned" section below for policy details.
                         </div>
                         ${enrollmentHtml}
-                        ${policiesHtml}
                     </div>
                 </div>
             `;
