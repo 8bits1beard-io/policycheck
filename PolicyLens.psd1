@@ -1,6 +1,6 @@
 @{
     RootModule        = 'PolicyLens.psm1'
-    ModuleVersion     = '1.3.0'
+    ModuleVersion     = '1.4.0'
     GUID              = 'a3e8f7c1-2d4b-4e6a-9f8c-1b3d5e7a9c2f'
     Author            = 'Joshua Walderbach'
     Description       = 'Scans a Windows device for applied Group Policy, Intune/MDM, and SCCM policies. Provides visibility into policy sources and helps plan GPO-to-Intune migration.'
@@ -16,6 +16,7 @@
         'Get-DeviceDeploymentStatus'
         'Get-GPOVerificationStatus'
         'Get-SCCMVerificationStatus'
+        'Get-AssignmentFilterDefinitions'
         'Compare-PolicyOverlap'
         'Get-SCCMPolicyData'
     )

@@ -17,6 +17,8 @@ function Get-SCCMSiteConnection {
         or non-domain scenarios.
     .OUTPUTS
         PSCustomObject with connection info (Server, SiteCode, Namespace, Connected, Message)
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]

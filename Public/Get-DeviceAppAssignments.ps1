@@ -6,20 +6,28 @@ function Get-DeviceAppAssignments {
         Retrieves all mobile apps configured in Intune along with their assignments,
         including Win32 apps, LOB apps, Microsoft Store apps, and web apps.
         Requires an active Microsoft Graph connection (call after Connect-MgGraph).
+        When FilterLookup is provided, assignments are enriched with filter names and rules.
     .PARAMETER GraphConnected
         Indicates Graph is already connected (called from Invoke-PolicyLens).
     .PARAMETER SkipLocalApps
         Skip the local Win32Apps registry enumeration. Use this when scanning a
         remote device where the local registry is not relevant.
+    .PARAMETER FilterLookup
+        Hashtable of filter definitions keyed by filter ID, from Get-AssignmentFilterDefinitions.
+        Used to enrich assignments with filter name and rule information.
     .OUTPUTS
         PSCustomObject with app assignment details.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
     param(
         [switch]$GraphConnected,
 
-        [switch]$SkipLocalApps
+        [switch]$SkipLocalApps,
+
+        [hashtable]$FilterLookup
     )
 
     Write-Verbose "Querying Microsoft Graph for app assignments..."
@@ -87,16 +95,24 @@ function Get-DeviceAppAssignments {
                     default { $target.'@odata.type' -replace '#microsoft\.graph\.' }
                 }
 
+                # Enrich with filter information if available
+                $filterId = $target.deviceAndAppManagementAssignmentFilterId
+                $filterName = $null
+                $filterRule = $null
+                if ($filterId -and $FilterLookup -and $FilterLookup.ContainsKey($filterId)) {
+                    $filterDef = $FilterLookup[$filterId]
+                    $filterName = $filterDef.DisplayName
+                    $filterRule = $filterDef.Rule
+                }
+
                 [PSCustomObject]@{
                     Intent     = $intentLabel
                     TargetType = $targetLabel
                     GroupId    = $target.groupId
-                    FilterId   = if ($_.target.deviceAndAppManagementAssignmentFilterId) {
-                        $_.target.deviceAndAppManagementAssignmentFilterId
-                    } else { $null }
-                    FilterType = if ($_.target.deviceAndAppManagementAssignmentFilterType) {
-                        $_.target.deviceAndAppManagementAssignmentFilterType
-                    } else { $null }
+                    FilterId   = $filterId
+                    FilterType = $target.deviceAndAppManagementAssignmentFilterType
+                    FilterName = $filterName
+                    FilterRule = $filterRule
                 }
             })
 

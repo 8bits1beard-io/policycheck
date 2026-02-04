@@ -21,6 +21,8 @@ function Get-GPOVerificationStatus {
         $gpoData = Get-GPOPolicyData
         $allApplied = @($gpoData.ComputerGPOs) + @($gpoData.UserGPOs)
         $verification = Get-GPOVerificationStatus -AppliedGPOs $allApplied
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     param(

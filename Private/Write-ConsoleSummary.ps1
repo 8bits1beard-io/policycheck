@@ -2,6 +2,8 @@ function Write-ConsoleSummary {
     <#
     .SYNOPSIS
         Formats and displays the PolicyLens analysis results to the console.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     param(

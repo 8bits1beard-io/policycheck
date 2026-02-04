@@ -13,6 +13,8 @@ function Get-MDMPolicyData {
         Skip running mdmdiagnosticstool (can be slow on some devices).
     .OUTPUTS
         PSCustomObject with enrollment info, Intune policies, and diagnostics path.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]

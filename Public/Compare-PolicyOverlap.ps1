@@ -14,6 +14,8 @@ function Compare-PolicyOverlap {
         Optional output from Get-GraphPolicyData.
     .OUTPUTS
         PSCustomObject with DetailedResults, MDMOnlyPolicies, and Summary.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]

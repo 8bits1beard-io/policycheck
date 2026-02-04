@@ -37,6 +37,8 @@ function ConvertTo-JsonExport {
         Invoke-PolicyLens -All | ConvertTo-JsonExport -OutputPath ".\export.json"
 
         Pipes policy check results directly to the export function.
+    .AUTHOR
+        Joshua Walderbach
     #>
 
     [CmdletBinding()]
@@ -109,9 +111,9 @@ function ConvertTo-JsonExport {
 
         # Build the complete export object
         $exportObject = [ordered]@{
-            schemaVersion = "1.3"
+            schemaVersion = "1.4"
             exportedAt    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-            exportedBy    = "PolicyLens v1.3.0"
+            exportedBy    = "PolicyLens v1.4.0"
             device        = $deviceInfo
             gpoData       = if ($Result.PSObject.Properties['GPOData']) { $Result.GPOData } else { $null }
             mdmData       = if ($Result.PSObject.Properties['MDMData']) { $Result.MDMData } else { $null }
@@ -121,6 +123,14 @@ function ConvertTo-JsonExport {
             groupData     = if ($Result.PSObject.Properties['GroupData']) { $Result.GroupData } else { $null }
             analysis      = if ($Result.PSObject.Properties['Analysis']) { $Result.Analysis } else { $null }
             mappingSuggestions = if ($Result.PSObject.Properties['MappingSuggestions']) { $Result.MappingSuggestions } else { $null }
+            filterData    = if ($Result.PSObject.Properties['FilterDefinitions'] -and $Result.FilterDefinitions -and $Result.FilterDefinitions.Available) {
+                [ordered]@{
+                    available   = $true
+                    filterCount = $Result.FilterDefinitions.FilterCount
+                    filters     = $Result.FilterDefinitions.Filters.Values
+                    collectedAt = $Result.FilterDefinitions.CollectedAt
+                }
+            } else { $null }
             verificationData = if ($Result.PSObject.Properties['DeploymentStatus'] -and $Result.DeploymentStatus) {
                 [ordered]@{
                     enabled         = $true

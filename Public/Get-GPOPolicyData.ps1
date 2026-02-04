@@ -7,6 +7,8 @@ function Get-GPOPolicyData {
         to build a complete picture of Group Policy settings on the device.
     .OUTPUTS
         PSCustomObject with ComputerGPOs, UserGPOs, RegistryPolicies, and metadata.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]

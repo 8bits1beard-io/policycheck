@@ -66,6 +66,8 @@ function Invoke-PolicyLens {
         Runs a full scan and exports results to a specific path.
     .OUTPUTS
         PSCustomObject with all collected data and analysis results.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     param(
@@ -148,7 +150,7 @@ function Invoke-PolicyLens {
 
     # --- Start logging ---
     Write-PolicyLensLog "========================================" -Level Info
-    Write-PolicyLensLog "PolicyLens started (v1.3.0)" -Level Info
+    Write-PolicyLensLog "PolicyLens started (v1.4.0)" -Level Info
     $logParams = "SkipIntune=$SkipIntune, SkipVerify=$SkipVerify, SkipGPOVerify=$SkipGPOVerify, SkipSCCM=$SkipSCCM, SkipSCCMVerify=$SkipSCCMVerify, SkipMDMDiag=$SkipMDMDiag"
     if ($isRemoteScan) { $logParams += ", ComputerName=$ComputerName" }
     Write-PolicyLensLog "Parameters: $logParams" -Level Info
@@ -156,7 +158,7 @@ function Invoke-PolicyLens {
     Write-Host ""
     Write-Host "  ┌──────────────────────────────────────────┐" -ForegroundColor Cyan
     Write-Host "  │  " -ForegroundColor Cyan -NoNewline
-    Write-Host "PolicyLens v1.3.0" -ForegroundColor White -NoNewline
+    Write-Host "PolicyLens v1.4.0" -ForegroundColor White -NoNewline
     Write-Host "                       │" -ForegroundColor Cyan
     Write-Host "  │  " -ForegroundColor Cyan -NoNewline
     Write-Host "GPO • Intune • SCCM Policy Scanner" -ForegroundColor DarkCyan -NoNewline
@@ -392,6 +394,9 @@ function Invoke-PolicyLens {
         $groupData = $null
         $deploymentStatus = $null
 
+        # Initialize filter definitions variable
+        $filterDefinitions = $null
+
         if ($IncludeGraph -and $graphConnected) {
             Write-PolicyLensLog "Phase 4: Graph collection started (for remote device)" -Level Info
             Write-Host ""
@@ -399,11 +404,25 @@ function Invoke-PolicyLens {
             Write-Host " GRAPH " -ForegroundColor Cyan -NoNewline
             Write-Host "───────────────────────────────────┐" -ForegroundColor DarkGray
 
-            # Get policy data
+            # Get assignment filter definitions first
+            Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+            Write-Host "► " -ForegroundColor Yellow -NoNewline
+            Write-Host "Fetching assignment filter definitions..." -ForegroundColor White
+            $filterDefinitions = Get-AssignmentFilterDefinitions -GraphConnected
+            if ($filterDefinitions.Available) {
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "✓ " -ForegroundColor Green -NoNewline
+                Write-Host "$($filterDefinitions.FilterCount)" -ForegroundColor Green -NoNewline
+                Write-Host " assignment filters" -ForegroundColor Gray
+                Write-PolicyLensLog "Phase 4: Assignment filters retrieved ($($filterDefinitions.FilterCount) filters)" -Level Info
+            }
+
+            # Get policy data with filter enrichment
             Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
             Write-Host "► " -ForegroundColor Yellow -NoNewline
             Write-Host "Fetching Intune configuration profiles..." -ForegroundColor White
-            $graphData = Get-GraphPolicyData -TenantId $TenantId -GraphConnected
+            $filterLookup = if ($filterDefinitions -and $filterDefinitions.Filters) { $filterDefinitions.Filters } else { $null }
+            $graphData = Get-GraphPolicyData -TenantId $TenantId -GraphConnected -FilterLookup $filterLookup
             if ($graphData.Available) {
                 $totalProfiles = $graphData.Profiles.Count + $graphData.CompliancePolicies.Count + $graphData.SettingsCatalog.Count
                 Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
@@ -420,7 +439,7 @@ function Invoke-PolicyLens {
             Write-Host "Intune app assignments" -ForegroundColor Cyan -NoNewline
             Write-Host "..." -ForegroundColor White
             Write-PolicyLensLog "Phase 4: App assignments started" -Level Info
-            $appData = Get-DeviceAppAssignments -GraphConnected -SkipLocalApps
+            $appData = Get-DeviceAppAssignments -GraphConnected -SkipLocalApps -FilterLookup $filterLookup
             $appCount = $appData.Apps.Count
             $assignedCount = @($appData.AssignedApps).Count
             Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
@@ -715,6 +734,7 @@ function Invoke-PolicyLens {
             DeploymentStatus = $deploymentStatus
             GPOVerification = $gpoVerification
             SCCMVerification = $sccmVerification
+            FilterDefinitions = $filterDefinitions
         }
 
         # Export to JSON with device metadata from remote
@@ -1091,6 +1111,7 @@ function Invoke-PolicyLens {
     $appData = $null
     $groupData = $null
     $deploymentStatus = $null
+    $filterDefinitions = $null
 
     if ($IncludeGraph -and $graphConnected) {
         Write-PolicyLensLog "Phase 4: Graph collection started" -Level Info
@@ -1100,11 +1121,25 @@ function Invoke-PolicyLens {
         Write-Host "MICROSOFT GRAPH API" -ForegroundColor Cyan -NoNewline
         Write-Host " ──────────────┤" -ForegroundColor DarkGray
 
-        # Get policy data
+        # Get assignment filter definitions first
+        Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "► " -ForegroundColor Yellow -NoNewline
+        Write-Host "Fetching assignment filter definitions..." -ForegroundColor White
+        $filterDefinitions = Get-AssignmentFilterDefinitions -GraphConnected
+        if ($filterDefinitions.Available) {
+            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+            Write-Host "✓ " -ForegroundColor Green -NoNewline
+            Write-Host "$($filterDefinitions.FilterCount)" -ForegroundColor Green -NoNewline
+            Write-Host " assignment filters" -ForegroundColor Gray
+            Write-PolicyLensLog "Phase 4: Assignment filters retrieved ($($filterDefinitions.FilterCount) filters)" -Level Info
+        }
+
+        # Get policy data with filter enrichment
         Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
         Write-Host "► " -ForegroundColor Yellow -NoNewline
         Write-Host "Fetching Intune configuration profiles..." -ForegroundColor White
-        $graphData = Get-GraphPolicyData -TenantId $TenantId -GraphConnected
+        $filterLookup = if ($filterDefinitions -and $filterDefinitions.Filters) { $filterDefinitions.Filters } else { $null }
+        $graphData = Get-GraphPolicyData -TenantId $TenantId -GraphConnected -FilterLookup $filterLookup
         if ($graphData.Available) {
             $totalProfiles = $graphData.Profiles.Count + $graphData.CompliancePolicies.Count + $graphData.SettingsCatalog.Count
             Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
@@ -1117,14 +1152,14 @@ function Invoke-PolicyLens {
             Write-PolicyLensLog "Phase 4: Intune profiles not available" -Level Warning
         }
 
-        # Get app assignments
+        # Get app assignments with filter enrichment
         Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
         Write-Host "► " -ForegroundColor Yellow -NoNewline
         Write-Host "Fetching " -ForegroundColor White -NoNewline
         Write-Host "Intune app assignments" -ForegroundColor Cyan -NoNewline
         Write-Host "..." -ForegroundColor White
         Write-PolicyLensLog "Phase 4: App assignments started" -Level Info
-        $appData = Get-DeviceAppAssignments -GraphConnected
+        $appData = Get-DeviceAppAssignments -GraphConnected -FilterLookup $filterLookup
         $appCount = $appData.Apps.Count
         $assignedCount = @($appData.AssignedApps).Count
         Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
@@ -1337,6 +1372,7 @@ function Invoke-PolicyLens {
         DeploymentStatus = $deploymentStatus
         GPOVerification = $gpoVerification
         SCCMVerification = $sccmVerification
+        FilterDefinitions = $filterDefinitions
     }
 
     # Export to JSON

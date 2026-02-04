@@ -11,6 +11,8 @@ function Merge-PolicyData {
         Array of policy objects extracted from gpresult XML (if available).
     .OUTPUTS
         Deduplicated array of policy objects.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]

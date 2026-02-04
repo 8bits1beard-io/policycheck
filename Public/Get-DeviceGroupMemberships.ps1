@@ -16,6 +16,8 @@ function Get-DeviceGroupMemberships {
         local registry/dsregcmd lookup and uses this ID directly for Graph queries.
     .OUTPUTS
         PSCustomObject with device identity and group membership details.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]

@@ -20,6 +20,8 @@ function Parse-GPLink {
         Array of PSCustomObjects with GPO link details.
     .EXAMPLE
         Parse-GPLink -GPLinkValue $ou.Properties['gplink'][0] -LinkLocation $ou.Properties['distinguishedname'][0]
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     param(

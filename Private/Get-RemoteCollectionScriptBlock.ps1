@@ -11,6 +11,8 @@ function Get-RemoteCollectionScriptBlock {
         When $true, the returned script block will skip running mdmdiagnosticstool.
     .OUTPUTS
         ScriptBlock - A self-contained script block for remote execution.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([ScriptBlock])]

@@ -20,6 +20,8 @@ function Get-SettingsCatalogMappings {
     .EXAMPLE
         $catalog = Get-SettingsCatalogMappings -GraphConnected
         Returns all Settings Catalog definitions.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     param(

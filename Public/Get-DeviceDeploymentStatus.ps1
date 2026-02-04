@@ -15,6 +15,8 @@ function Get-DeviceDeploymentStatus {
         PSCustomObject with profile and compliance policy deployment states.
     .EXAMPLE
         Get-DeviceDeploymentStatus -AzureADDeviceId "12345678-1234-1234-1234-123456789012" -GraphConnected
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]

@@ -16,6 +16,8 @@ function Find-SettingsCatalogMatch {
         Hashtable of existing static mappings from SettingsMap.psd1.
     .OUTPUTS
         Array of match objects with Setting, Confidence, Score, and Reasons.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     param(

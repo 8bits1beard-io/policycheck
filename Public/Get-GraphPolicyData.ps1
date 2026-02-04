@@ -5,19 +5,27 @@ function Get-GraphPolicyData {
     .DESCRIPTION
         Connects to Microsoft Graph and retrieves device configuration profiles,
         compliance policies, and Settings Catalog policies with their assignments.
+        When FilterLookup is provided, assignments are enriched with filter names and rules.
     .PARAMETER TenantId
         Azure AD tenant ID for authentication.
     .PARAMETER GraphConnected
         Skip connecting/disconnecting from Graph (caller manages the connection).
+    .PARAMETER FilterLookup
+        Hashtable of filter definitions keyed by filter ID, from Get-AssignmentFilterDefinitions.
+        Used to enrich assignments with filter name and rule information.
     .OUTPUTS
         PSCustomObject with profiles, compliance policies, and settings catalog data.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
     param(
         [string]$TenantId,
 
-        [switch]$GraphConnected
+        [switch]$GraphConnected,
+
+        [hashtable]$FilterLookup
     )
 
     Write-Verbose "Querying Microsoft Graph API for Intune policy data..."
@@ -93,11 +101,24 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
                     '#microsoft.graph.exclusionGroupAssignmentTarget'   { "Exclude: $($target.groupId)" }
                     default { $target.'@odata.type' -replace '#microsoft\.graph\.' }
                 }
+
+                # Enrich with filter information if available
+                $filterId = $target.deviceAndAppManagementAssignmentFilterId
+                $filterName = $null
+                $filterRule = $null
+                if ($filterId -and $FilterLookup -and $FilterLookup.ContainsKey($filterId)) {
+                    $filterDef = $FilterLookup[$filterId]
+                    $filterName = $filterDef.DisplayName
+                    $filterRule = $filterDef.Rule
+                }
+
                 [PSCustomObject]@{
                     TargetType = $targetLabel
                     GroupId    = $target.groupId
-                    FilterId   = $target.deviceAndAppManagementAssignmentFilterId
+                    FilterId   = $filterId
                     FilterType = $target.deviceAndAppManagementAssignmentFilterType
+                    FilterName = $filterName
+                    FilterRule = $filterRule
                 }
             })
 
@@ -143,11 +164,24 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
                     '#microsoft.graph.exclusionGroupAssignmentTarget'   { "Exclude: $($target.groupId)" }
                     default { $target.'@odata.type' -replace '#microsoft\.graph\.' }
                 }
+
+                # Enrich with filter information if available
+                $filterId = $target.deviceAndAppManagementAssignmentFilterId
+                $filterName = $null
+                $filterRule = $null
+                if ($filterId -and $FilterLookup -and $FilterLookup.ContainsKey($filterId)) {
+                    $filterDef = $FilterLookup[$filterId]
+                    $filterName = $filterDef.DisplayName
+                    $filterRule = $filterDef.Rule
+                }
+
                 [PSCustomObject]@{
                     TargetType = $targetLabel
                     GroupId    = $target.groupId
-                    FilterId   = $target.deviceAndAppManagementAssignmentFilterId
+                    FilterId   = $filterId
                     FilterType = $target.deviceAndAppManagementAssignmentFilterType
+                    FilterName = $filterName
+                    FilterRule = $filterRule
                 }
             })
 
@@ -193,11 +227,24 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
                     '#microsoft.graph.exclusionGroupAssignmentTarget'   { "Exclude: $($target.groupId)" }
                     default { $target.'@odata.type' -replace '#microsoft\.graph\.' }
                 }
+
+                # Enrich with filter information if available
+                $filterId = $target.deviceAndAppManagementAssignmentFilterId
+                $filterName = $null
+                $filterRule = $null
+                if ($filterId -and $FilterLookup -and $FilterLookup.ContainsKey($filterId)) {
+                    $filterDef = $FilterLookup[$filterId]
+                    $filterName = $filterDef.DisplayName
+                    $filterRule = $filterDef.Rule
+                }
+
                 [PSCustomObject]@{
                     TargetType = $targetLabel
                     GroupId    = $target.groupId
-                    FilterId   = $target.deviceAndAppManagementAssignmentFilterId
+                    FilterId   = $filterId
                     FilterType = $target.deviceAndAppManagementAssignmentFilterType
+                    FilterName = $filterName
+                    FilterRule = $filterRule
                 }
             })
 

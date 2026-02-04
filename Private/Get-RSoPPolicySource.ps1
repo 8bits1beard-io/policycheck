@@ -12,6 +12,8 @@ function Get-RSoPPolicySource {
     .NOTES
         Requires Administrator privileges to query RSoP data.
         RSoP logging must be enabled (it is by default unless disabled by policy).
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([hashtable])]

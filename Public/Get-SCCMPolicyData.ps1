@@ -7,6 +7,8 @@ function Get-SCCMPolicyData {
         SCCM-managed applications, compliance baselines, software updates, and client settings.
     .OUTPUTS
         PSCustomObject with SCCM client status, applications, baselines, and updates.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]

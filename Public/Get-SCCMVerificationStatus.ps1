@@ -18,6 +18,8 @@ function Get-SCCMVerificationStatus {
         PSCredential for authenticating to the site server.
     .OUTPUTS
         PSCustomObject with verification states for all deployments.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]

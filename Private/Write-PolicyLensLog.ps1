@@ -11,6 +11,8 @@ function Write-PolicyLensLog {
         Log level: Info, Warning, or Error. Defaults to Info.
     .PARAMETER LogPath
         Path to the log file. If not specified, uses the script-scoped $Script:LogPath.
+    .AUTHOR
+        Joshua Walderbach
     #>
     [CmdletBinding()]
     param(
