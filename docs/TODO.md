@@ -1,23 +1,53 @@
 # PolicyLens TODO
 
-## Future Enhancements
+## Completed Features
 
 ### Settings Catalog Lookup via Graph API
+**Status:** Completed in v1.0.0
+
+Implemented via the `-SuggestMappings` parameter. When a GPO setting isn't found in our local `Config/SettingsMap.psd1`, the tool can query Microsoft Graph API to search Settings Catalog definitions for potential matches.
+
+**Implementation:**
+- `Get-SettingsCatalogMappings` function queries Graph API
+- `Find-SettingsCatalogMatch` performs fuzzy matching against GPO settings
+- Viewer displays suggestions with confidence levels (High, Medium, Low)
+- Copy-to-clipboard for easy addition to SettingsMap.psd1
+
+### GPO Application Verification
+**Status:** Completed in v1.3.0
+
+Queries Active Directory to compare linked GPOs against applied GPOs, detecting:
+- Security filtering (GPO linked but not applied due to permissions)
+- Disabled GPO links
+- WMI filtering
+
+### SCCM Deployment Verification
+**Status:** Completed in v1.3.0
+
+Queries SCCM site server (SMS Provider) to compare assigned deployments against installed state:
+- Collection memberships
+- Application deployments (Installed, Pending, Failed)
+- Baseline compliance
+- Software updates
+
+---
+
+## Future Enhancements
+
+### Service Principal Authentication
 **Priority:** Medium
 **Status:** Planned
 
-Currently, when a GPO setting isn't found in our local `Config/SettingsMap.psd1`, the tool labels it as "No Mapping". This may be inaccurate - the setting might have an Intune equivalent that we just haven't mapped yet.
+Currently Graph API requires interactive authentication. Add support for service principal (app registration) authentication for automated/scheduled scans.
 
-**Proposed solution:**
-1. Query Microsoft Graph API endpoint: `deviceManagement/configurationPolicySettings/settingDefinitions`
-2. Search the Settings Catalog definitions for potential matches when a GPO setting isn't in our local map
-3. Change labeling:
-   - "Matched" - Found in local map and confirmed
-   - "No Mapping" - Confirmed no Intune equivalent exists
-   - "Unknown" - Not in local map, couldn't determine from Graph API
+### Multi-Device Batch Scanning
+**Priority:** Low
+**Status:** Planned
 
-**Graph endpoint:** `GET https://graph.microsoft.com/beta/deviceManagement/configurationPolicySettings/settingDefinitions`
+Add support for scanning multiple devices in a batch and generating a consolidated report.
 
-**Files to modify:**
-- `Public/Compare-PolicyOverlap.ps1` - Add Graph lookup logic
-- `Tools/PolicyLensViewer.html` - Update status colors/labels for "Unknown"
+### Export to Excel/CSV
+**Priority:** Low
+**Status:** Planned
+
+Add export formats beyond JSON for easier sharing with non-technical stakeholders.

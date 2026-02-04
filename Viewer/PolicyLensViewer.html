@@ -1322,7 +1322,7 @@
                                     alert(`Device "${data.device?.computerName || 'Unknown'}" is already loaded.`);
                                 }
                             } else {
-                                alert(`Invalid schema in file: ${file.name}. Expected schemaVersion "1.0".`);
+                                alert(`Invalid schema in file: ${file.name}. Expected schemaVersion 1.0-1.3.`);
                             }
                         } catch (err) {
                             alert(`Error parsing ${file.name}: ${err.message}`);
@@ -1334,7 +1334,9 @@
         }
 
         function validateSchema(data) {
-            return data && data.schemaVersion === "1.0";
+            // Accept schema versions 1.0 through 1.3
+            const validVersions = ["1.0", "1.1", "1.2", "1.3"];
+            return data && validVersions.includes(data.schemaVersion);
         }
 
         function removeDevice(index, e) {

@@ -5,6 +5,30 @@ All notable changes to PolicyLens are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-04
+
+### Added
+- **SCCM Deployment Verification** - New `Get-SCCMVerificationStatus` function queries SCCM site server to compare assigned deployments against installed state (Installed, Pending, Failed)
+- **GPO Application Verification** - New `Get-GPOVerificationStatus` function queries Active Directory to compare linked GPOs against applied GPOs, detecting security filtering and disabled links
+- New parameters for SCCM verification:
+  - `-SCCMSiteServer` - Specify SCCM site server (SMS Provider) for verification
+  - `-SCCMSiteCode` - Specify SCCM site code
+  - `-SCCMCredential` - Provide credentials for SCCM site server connection
+  - `-SkipSCCMVerify` - Skip SCCM deployment verification only
+- New parameter `-SkipGPOVerify` to skip GPO application verification via Active Directory
+- **Auto-Discovery** - SCCM site server and site code automatically detected from client WMI/registry when not provided
+- New private functions: `Get-SCCMSiteConnection` (site discovery), `Parse-GPLink` (AD gPLink parsing)
+- JSON schema version 1.3 with `sccmVerificationData` and `gpoVerificationData` sections
+- Viewer displays SCCM deployment status table with collection membership chips
+- Viewer displays GPO verification status showing linked vs applied state
+
+### Changed
+- **Default Behavior** - Graph API and deployment verification now enabled by default
+  - Use `-SkipIntune` to skip Graph queries entirely
+  - Use `-SkipVerify` to skip Intune deployment verification only
+- RSoP restore now shows warning in terminal and writes to log when temporarily enabled/restored
+- `Get-GPOPolicyData` returns `RSoPWasTemporarilyEnabled` property for programmatic access
+
 ## [1.2.0] - 2026-02-02
 
 ### Added

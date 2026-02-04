@@ -22,6 +22,21 @@ Invoke-PolicyLens -SkipIntune
 # Skip deployment verification only
 Invoke-PolicyLens -SkipVerify
 
+# Skip GPO verification via Active Directory
+Invoke-PolicyLens -SkipGPOVerify
+
+# Skip SCCM client data collection
+Invoke-PolicyLens -SkipSCCM
+
+# Skip SCCM deployment verification only (still collects client data)
+Invoke-PolicyLens -SkipSCCMVerify
+
+# With SCCM site server verification credentials
+Invoke-PolicyLens -SCCMCredential (Get-Credential)
+
+# Override auto-discovered SCCM site server
+Invoke-PolicyLens -SCCMSiteServer SCCMSERVER1 -SCCMSiteCode PS1 -SCCMCredential $cred
+
 # With mapping suggestions for unmapped GPO settings
 Invoke-PolicyLens -SuggestMappings
 
@@ -61,7 +76,9 @@ PolicyLens/
 - `Get-GraphPolicyData` - Fetches Intune profiles via Microsoft Graph
 - `Get-DeviceAppAssignments` - Gets Intune app assignments via Graph
 - `Get-DeviceGroupMemberships` - Gets Azure AD group memberships via Graph
-- `Get-DeviceDeploymentStatus` - Verifies deployment status of assigned policies via Graph
+- `Get-DeviceDeploymentStatus` - Verifies deployment status of assigned Intune policies via Graph
+- `Get-GPOVerificationStatus` - Verifies GPO application by comparing linked vs applied GPOs via Active Directory
+- `Get-SCCMVerificationStatus` - Verifies SCCM deployments by comparing assigned vs installed via SMS Provider
 - `Get-SettingsCatalogMappings` - Fetches Intune Settings Catalog definitions via Graph (cached)
 - `Compare-PolicyOverlap` - Cross-references GPO settings against MDM using SettingsMap
 
@@ -72,12 +89,15 @@ PolicyLens/
 - `Find-SettingsCatalogMatch` - Matches GPO settings to Settings Catalog items
 - `Get-RemoteCollectionScriptBlock` - Generates script block for WinRM remote scans
 - `Get-RSoPPolicySource` - Queries RSoP WMI to map registry settings to source GPOs
+- `Get-SCCMSiteConnection` - Auto-discovers and connects to SCCM SMS Provider
+- `Parse-GPLink` - Parses Active Directory gPLink attribute format
 - `Merge-PolicyData` - Normalizes and deduplicates policy data from multiple sources
 
 **Data Flow:**
 1. `Invoke-PolicyLens` calls data collection functions (GPO, MDM, SCCM, optionally Graph)
-2. `Compare-PolicyOverlap` analyzes settings using `Config/SettingsMap.psd1` mapping
-3. Results flow to `Write-ConsoleSummary` and `ConvertTo-JsonExport`
+2. Verification functions check assigned vs applied status (GPO, Intune, SCCM)
+3. `Compare-PolicyOverlap` analyzes settings using `Config/SettingsMap.psd1` mapping
+4. Results flow to `Write-ConsoleSummary` and `ConvertTo-JsonExport`
 
 ## Key Files
 

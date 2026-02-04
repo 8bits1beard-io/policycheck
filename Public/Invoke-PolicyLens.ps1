@@ -148,7 +148,7 @@ function Invoke-PolicyLens {
 
     # --- Start logging ---
     Write-PolicyLensLog "========================================" -Level Info
-    Write-PolicyLensLog "PolicyLens started (v1.2.0)" -Level Info
+    Write-PolicyLensLog "PolicyLens started (v1.3.0)" -Level Info
     $logParams = "SkipIntune=$SkipIntune, SkipVerify=$SkipVerify, SkipGPOVerify=$SkipGPOVerify, SkipSCCM=$SkipSCCM, SkipSCCMVerify=$SkipSCCMVerify, SkipMDMDiag=$SkipMDMDiag"
     if ($isRemoteScan) { $logParams += ", ComputerName=$ComputerName" }
     Write-PolicyLensLog "Parameters: $logParams" -Level Info
@@ -156,7 +156,7 @@ function Invoke-PolicyLens {
     Write-Host ""
     Write-Host "  ┌──────────────────────────────────────────┐" -ForegroundColor Cyan
     Write-Host "  │  " -ForegroundColor Cyan -NoNewline
-    Write-Host "PolicyLens v1.2.0" -ForegroundColor White -NoNewline
+    Write-Host "PolicyLens v1.3.0" -ForegroundColor White -NoNewline
     Write-Host "                       │" -ForegroundColor Cyan
     Write-Host "  │  " -ForegroundColor Cyan -NoNewline
     Write-Host "GPO • Intune • SCCM Policy Scanner" -ForegroundColor DarkCyan -NoNewline
@@ -198,6 +198,55 @@ function Invoke-PolicyLens {
     # REMOTE SCAN PATH
     # ============================================================
     if ($isRemoteScan) {
+        # --- Graph Authentication (upfront if not skipped) ---
+        $graphConnected = $false
+        if ($IncludeGraph) {
+            $graphModule = Get-Module -ListAvailable Microsoft.Graph.DeviceManagement -ErrorAction SilentlyContinue
+            if (-not $graphModule) {
+                Write-Host "  ⚠ " -ForegroundColor Yellow -NoNewline
+                Write-Host "Microsoft.Graph module not installed" -ForegroundColor Yellow
+                Write-Host "    Install: " -ForegroundColor DarkGray -NoNewline
+                Write-Host "Install-Module Microsoft.Graph -Scope CurrentUser" -ForegroundColor DarkCyan
+                Write-Host "    Continuing without Intune data..." -ForegroundColor DarkYellow
+                Write-Host ""
+                Write-PolicyLensLog "Graph module not installed - continuing without Intune data" -Level Warning
+                $IncludeGraph = $false
+            }
+            else {
+                Write-Host "  ► " -ForegroundColor Yellow -NoNewline
+                Write-Host "Connecting to " -ForegroundColor White -NoNewline
+                Write-Host "Microsoft Graph" -ForegroundColor Cyan -NoNewline
+                Write-Host "..." -ForegroundColor White
+                try {
+                    $connectParams = @{
+                        Scopes = @(
+                            'DeviceManagementConfiguration.Read.All'
+                            'DeviceManagementManagedDevices.Read.All'
+                            'DeviceManagementApps.Read.All'
+                            'Directory.Read.All'
+                            'Device.Read.All'
+                        )
+                    }
+                    if ($TenantId) { $connectParams['TenantId'] = $TenantId }
+
+                    Connect-MgGraph @connectParams -ErrorAction Stop | Out-Null
+                    $graphConnected = $true
+                    Write-Host "  ✓ " -ForegroundColor Green -NoNewline
+                    Write-Host "Connected to Graph API" -ForegroundColor Green
+                    Write-Host ""
+                    Write-PolicyLensLog "Graph: Connected successfully (upfront auth)" -Level Info
+                }
+                catch {
+                    Write-Host "  ✗ " -ForegroundColor Red -NoNewline
+                    Write-Host "Graph connection failed: $_" -ForegroundColor Red
+                    Write-Host "    Continuing without Intune data..." -ForegroundColor DarkYellow
+                    Write-Host ""
+                    Write-PolicyLensLog "Graph: Connection failed - $_ (continuing without Intune data)" -Level Warning
+                    $IncludeGraph = $false
+                }
+            }
+        }
+
         try {
             # --- Connect to remote machine ---
             Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
@@ -343,165 +392,113 @@ function Invoke-PolicyLens {
         $groupData = $null
         $deploymentStatus = $null
 
-        if ($IncludeGraph) {
+        if ($IncludeGraph -and $graphConnected) {
             Write-PolicyLensLog "Phase 4: Graph collection started (for remote device)" -Level Info
-            $graphModule = Get-Module -ListAvailable Microsoft.Graph.DeviceManagement -ErrorAction SilentlyContinue
-            if (-not $graphModule) {
-                Write-Host ""
-                Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
-                Write-Host " GRAPH " -ForegroundColor Cyan -NoNewline
-                Write-Host "───────────────────────────────────┐" -ForegroundColor DarkGray
+            Write-Host ""
+            Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
+            Write-Host " GRAPH " -ForegroundColor Cyan -NoNewline
+            Write-Host "───────────────────────────────────┐" -ForegroundColor DarkGray
+
+            # Get policy data
+            Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+            Write-Host "► " -ForegroundColor Yellow -NoNewline
+            Write-Host "Fetching Intune configuration profiles..." -ForegroundColor White
+            $graphData = Get-GraphPolicyData -TenantId $TenantId -GraphConnected
+            if ($graphData.Available) {
+                $totalProfiles = $graphData.Profiles.Count + $graphData.CompliancePolicies.Count + $graphData.SettingsCatalog.Count
                 Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
-                Write-Host "Microsoft.Graph module not installed" -ForegroundColor Yellow
+                Write-Host "✓ " -ForegroundColor Green -NoNewline
+                Write-Host "$totalProfiles" -ForegroundColor Green -NoNewline
+                Write-Host " profiles/policies" -ForegroundColor Gray
+                Write-PolicyLensLog "Phase 4: Intune profiles retrieved ($totalProfiles profiles)" -Level Info
+            }
+
+            # Get app assignments (skip local apps for remote scan)
+            Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+            Write-Host "► " -ForegroundColor Yellow -NoNewline
+            Write-Host "Fetching " -ForegroundColor White -NoNewline
+            Write-Host "Intune app assignments" -ForegroundColor Cyan -NoNewline
+            Write-Host "..." -ForegroundColor White
+            Write-PolicyLensLog "Phase 4: App assignments started" -Level Info
+            $appData = Get-DeviceAppAssignments -GraphConnected -SkipLocalApps
+            $appCount = $appData.Apps.Count
+            $assignedCount = @($appData.AssignedApps).Count
+            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+            Write-Host "✓ " -ForegroundColor Green -NoNewline
+            Write-Host "$appCount" -ForegroundColor Green -NoNewline
+            Write-Host " apps (" -ForegroundColor Gray -NoNewline
+            Write-Host "$assignedCount" -ForegroundColor Cyan -NoNewline
+            Write-Host " assigned)" -ForegroundColor Gray
+            Write-PolicyLensLog "Phase 4: App assignments complete ($appCount apps, $assignedCount assigned)" -Level Info
+
+            # Get group memberships using remote device info
+            Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+            Write-Host "► " -ForegroundColor Yellow -NoNewline
+            Write-Host "Fetching " -ForegroundColor White -NoNewline
+            Write-Host "Azure AD group memberships" -ForegroundColor Cyan -NoNewline
+            Write-Host "..." -ForegroundColor White
+            Write-PolicyLensLog "Phase 4: Group memberships started (remote device: $($deviceMetadata.ComputerName))" -Level Info
+            $groupData = Get-DeviceGroupMemberships -GraphConnected `
+                -DeviceName $deviceMetadata.ComputerName `
+                -DeviceId $deviceMetadata.AADDeviceId
+            if ($groupData.DeviceFound) {
+                $groupCount = $groupData.Groups.Count
                 Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                Write-Host "  Install: " -ForegroundColor DarkGray -NoNewline
-                Write-Host "Install-Module Microsoft.Graph -Scope CurrentUser" -ForegroundColor DarkCyan
-                Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
-                Write-PolicyLensLog "Phase 4: Microsoft.Graph module not installed - skipping" -Level Warning
+                Write-Host "✓ " -ForegroundColor Green -NoNewline
+                Write-Host "Device found • Member of " -ForegroundColor Gray -NoNewline
+                Write-Host "$groupCount" -ForegroundColor Green -NoNewline
+                Write-Host " groups" -ForegroundColor Gray
+                Write-PolicyLensLog "Phase 4: Group memberships complete ($groupCount groups)" -Level Info
             }
             else {
-                Write-Host ""
-                Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
-                Write-Host " GRAPH " -ForegroundColor Cyan -NoNewline
-                Write-Host "───────────────────────────────────┐" -ForegroundColor DarkGray
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "○ " -ForegroundColor Yellow -NoNewline
+                Write-Host "Device not found in Azure AD" -ForegroundColor Yellow
+                Write-PolicyLensLog "Phase 4: Device not found in Azure AD" -Level Warning
+            }
+
+            # --- Deployment Verification (Optional) ---
+            if ($VerifyDeployment -and $groupData.DeviceFound -and $groupData.Device.DeviceId) {
                 Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
                 Write-Host "► " -ForegroundColor Yellow -NoNewline
-                Write-Host "Connecting to " -ForegroundColor White -NoNewline
-                Write-Host "Microsoft Graph" -ForegroundColor Cyan -NoNewline
-                Write-Host "...          │" -ForegroundColor White
+                Write-Host "Verifying " -ForegroundColor White -NoNewline
+                Write-Host "deployment status" -ForegroundColor Cyan -NoNewline
+                Write-Host "..." -ForegroundColor White
+                Write-PolicyLensLog "Deployment Verification: Started (remote device)" -Level Info
                 try {
-                    $connectParams = @{
-                        Scopes = @(
-                            'DeviceManagementConfiguration.Read.All'
-                            'DeviceManagementManagedDevices.Read.All'
-                            'DeviceManagementApps.Read.All'
-                            'Directory.Read.All'
-                            'Device.Read.All'
-                        )
-                    }
-                    if ($TenantId) { $connectParams['TenantId'] = $TenantId }
-
-                    Connect-MgGraph @connectParams -ErrorAction Stop | Out-Null
-                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                    Write-Host "✓ " -ForegroundColor Green -NoNewline
-                    Write-Host "Connected to Graph API" -ForegroundColor Green
-                    Write-PolicyLensLog "Phase 4: Graph connected successfully" -Level Info
-
-                    # Get policy data
-                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                    Write-Host "  Fetching Intune configuration profiles..." -ForegroundColor Gray
-                    $graphData = Get-GraphPolicyData -TenantId $TenantId -GraphConnected
-                    if ($graphData.Available) {
-                        $totalProfiles = $graphData.Profiles.Count + $graphData.CompliancePolicies.Count + $graphData.SettingsCatalog.Count
-                        Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                        Write-Host "  ✓ " -ForegroundColor Green -NoNewline
-                        Write-Host "$totalProfiles" -ForegroundColor Green -NoNewline
-                        Write-Host " profiles/policies" -ForegroundColor Gray
-                        Write-PolicyLensLog "Phase 4: Intune profiles retrieved ($totalProfiles profiles)" -Level Info
-                    }
-
-                    # Get app assignments (skip local apps for remote scan)
-                    Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
-                    Write-Host "► " -ForegroundColor Yellow -NoNewline
-                    Write-Host "Fetching " -ForegroundColor White -NoNewline
-                    Write-Host "Intune app assignments" -ForegroundColor Cyan -NoNewline
-                    Write-Host "...          │" -ForegroundColor White
-                    Write-PolicyLensLog "Phase 4: App assignments started" -Level Info
-                    $appData = Get-DeviceAppAssignments -GraphConnected -SkipLocalApps
-                    $appCount = $appData.Apps.Count
-                    $assignedCount = @($appData.AssignedApps).Count
-                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                    Write-Host "✓ " -ForegroundColor Green -NoNewline
-                    Write-Host "$appCount" -ForegroundColor Green -NoNewline
-                    Write-Host " apps (" -ForegroundColor Gray -NoNewline
-                    Write-Host "$assignedCount" -ForegroundColor Cyan -NoNewline
-                    Write-Host " assigned)" -ForegroundColor Gray
-                    Write-PolicyLensLog "Phase 4: App assignments complete ($appCount apps, $assignedCount assigned)" -Level Info
-
-                    # Get group memberships using remote device info
-                    Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
-                    Write-Host "► " -ForegroundColor Yellow -NoNewline
-                    Write-Host "Fetching " -ForegroundColor White -NoNewline
-                    Write-Host "Azure AD group memberships" -ForegroundColor Cyan -NoNewline
-                    Write-Host "...  │" -ForegroundColor White
-                    Write-PolicyLensLog "Phase 4: Group memberships started (remote device: $($deviceMetadata.ComputerName))" -Level Info
-                    $groupData = Get-DeviceGroupMemberships -GraphConnected `
-                        -DeviceName $deviceMetadata.ComputerName `
-                        -DeviceId $deviceMetadata.AADDeviceId
-                    if ($groupData.DeviceFound) {
-                        $groupCount = $groupData.Groups.Count
+                    $deploymentStatus = Get-DeviceDeploymentStatus -AzureADDeviceId $groupData.Device.DeviceId -GraphConnected
+                    if ($deploymentStatus.DeviceFound) {
+                        $profileCount = @($deploymentStatus.ProfileStates).Count
+                        $complianceCount = @($deploymentStatus.ComplianceStates).Count
+                        $appliedCount = @($deploymentStatus.ProfileStates | Where-Object { $_.State -eq 'applied' }).Count
                         Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
                         Write-Host "✓ " -ForegroundColor Green -NoNewline
-                        Write-Host "Device found • Member of " -ForegroundColor Gray -NoNewline
-                        Write-Host "$groupCount" -ForegroundColor Green -NoNewline
-                        Write-Host " groups" -ForegroundColor Gray
-                        Write-PolicyLensLog "Phase 4: Group memberships complete ($groupCount groups)" -Level Info
+                        Write-Host "$profileCount" -ForegroundColor Green -NoNewline
+                        Write-Host " profiles (" -ForegroundColor Gray -NoNewline
+                        Write-Host "$appliedCount" -ForegroundColor Cyan -NoNewline
+                        Write-Host " applied), " -ForegroundColor Gray -NoNewline
+                        Write-Host "$complianceCount" -ForegroundColor Green -NoNewline
+                        Write-Host " compliance policies" -ForegroundColor Gray
+                        Write-PolicyLensLog "Deployment Verification: Complete ($profileCount profiles, $complianceCount compliance)" -Level Info
                     }
                     else {
                         Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
                         Write-Host "○ " -ForegroundColor Yellow -NoNewline
-                        Write-Host "Device not found in Azure AD" -ForegroundColor Yellow
-                        Write-PolicyLensLog "Phase 4: Device not found in Azure AD" -Level Warning
+                        Write-Host "Device not found in Intune" -ForegroundColor Yellow
+                        Write-PolicyLensLog "Deployment Verification: Device not in Intune" -Level Warning
                     }
-
-                    # --- Deployment Verification (Optional) ---
-                    if ($VerifyDeployment -and $groupData.DeviceFound -and $groupData.Device.DeviceId) {
-                        Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
-                        Write-Host "► " -ForegroundColor Yellow -NoNewline
-                        Write-Host "Verifying " -ForegroundColor White -NoNewline
-                        Write-Host "deployment status" -ForegroundColor Cyan -NoNewline
-                        Write-Host "...            │" -ForegroundColor White
-                        Write-PolicyLensLog "Deployment Verification: Started (remote device)" -Level Info
-                        try {
-                            $deploymentStatus = Get-DeviceDeploymentStatus -AzureADDeviceId $groupData.Device.DeviceId -GraphConnected
-                            if ($deploymentStatus.DeviceFound) {
-                                $profileCount = @($deploymentStatus.ProfileStates).Count
-                                $complianceCount = @($deploymentStatus.ComplianceStates).Count
-                                $appliedCount = @($deploymentStatus.ProfileStates | Where-Object { $_.State -eq 'applied' }).Count
-                                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                                Write-Host "✓ " -ForegroundColor Green -NoNewline
-                                Write-Host "$profileCount" -ForegroundColor Green -NoNewline
-                                Write-Host " profiles (" -ForegroundColor Gray -NoNewline
-                                Write-Host "$appliedCount" -ForegroundColor Cyan -NoNewline
-                                Write-Host " applied), " -ForegroundColor Gray -NoNewline
-                                Write-Host "$complianceCount" -ForegroundColor Green -NoNewline
-                                Write-Host " compliance policies" -ForegroundColor Gray
-                                Write-PolicyLensLog "Deployment Verification: Complete ($profileCount profiles, $complianceCount compliance)" -Level Info
-                            }
-                            else {
-                                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                                Write-Host "○ " -ForegroundColor Yellow -NoNewline
-                                Write-Host "Device not found in Intune" -ForegroundColor Yellow
-                                Write-PolicyLensLog "Deployment Verification: Device not in Intune" -Level Warning
-                            }
-                        }
-                        catch {
-                            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                            Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
-                            Write-Host "Could not verify deployment status" -ForegroundColor Yellow
-                            Write-PolicyLensLog "Deployment Verification: Failed - $_" -Level Warning
-                        }
-                    }
-
-                    Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
                 }
                 catch {
                     Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                    Write-Host "✗ " -ForegroundColor Red -NoNewline
-                    Write-Host "Graph connection failed: $_" -ForegroundColor Red
-                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                    Write-Host "  Continuing with device data only" -ForegroundColor DarkYellow
-                    Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
-                    Write-PolicyLensLog "Phase 4: Graph connection failed - $_" -Level Error
-                }
-                finally {
-                    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-                    Write-PolicyLensLog "Graph: Disconnected" -Level Info
+                    Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
+                    Write-Host "Could not verify deployment status" -ForegroundColor Yellow
+                    Write-PolicyLensLog "Deployment Verification: Failed - $_" -Level Warning
                 }
             }
+
+            Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
         }
-        else {
+        elseif (-not $IncludeGraph) {
             Write-Host ""
             Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
             Write-Host " GRAPH " -ForegroundColor DarkGray -NoNewline
@@ -509,9 +506,9 @@ function Invoke-PolicyLens {
             Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
             Write-Host "○ " -ForegroundColor DarkGray -NoNewline
             Write-Host "Graph API skipped " -ForegroundColor DarkGray -NoNewline
-            Write-Host "(use -IncludeGraph)" -ForegroundColor DarkCyan
+            Write-Host "(remove -SkipIntune to enable)" -ForegroundColor DarkCyan
             Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
-            Write-PolicyLensLog "Phase 4: Skipped (IncludeGraph not specified)" -Level Info
+            Write-PolicyLensLog "Phase 4: Skipped (SkipIntune specified)" -Level Info
         }
 
         # --- GPO Verification (Remote Scan) ---
@@ -759,6 +756,12 @@ function Invoke-PolicyLens {
 
         Write-PolicyLensLog "PolicyLens finished (${duration}s) - Remote scan of $($deviceMetadata.ComputerName)" -Level Info
 
+        # Disconnect from Graph if we connected
+        if ($graphConnected) {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+            Write-PolicyLensLog "Graph: Disconnected" -Level Info
+        }
+
         return $result
     }
 
@@ -782,6 +785,55 @@ function Invoke-PolicyLens {
         Write-Host "Running as Administrator" -ForegroundColor Green
         Write-Host ""
         Write-PolicyLensLog "Running with Administrator privileges" -Level Info
+    }
+
+    # --- Graph Authentication (upfront if not skipped) ---
+    $graphConnected = $false
+    if ($IncludeGraph) {
+        $graphModule = Get-Module -ListAvailable Microsoft.Graph.DeviceManagement -ErrorAction SilentlyContinue
+        if (-not $graphModule) {
+            Write-Host "  ⚠ " -ForegroundColor Yellow -NoNewline
+            Write-Host "Microsoft.Graph module not installed" -ForegroundColor Yellow
+            Write-Host "    Install: " -ForegroundColor DarkGray -NoNewline
+            Write-Host "Install-Module Microsoft.Graph -Scope CurrentUser" -ForegroundColor DarkCyan
+            Write-Host "    Continuing without Intune data..." -ForegroundColor DarkYellow
+            Write-Host ""
+            Write-PolicyLensLog "Graph module not installed - continuing without Intune data" -Level Warning
+            $IncludeGraph = $false
+        }
+        else {
+            Write-Host "  ► " -ForegroundColor Yellow -NoNewline
+            Write-Host "Connecting to " -ForegroundColor White -NoNewline
+            Write-Host "Microsoft Graph" -ForegroundColor Cyan -NoNewline
+            Write-Host "..." -ForegroundColor White
+            try {
+                $connectParams = @{
+                    Scopes = @(
+                        'DeviceManagementConfiguration.Read.All'
+                        'DeviceManagementManagedDevices.Read.All'
+                        'DeviceManagementApps.Read.All'
+                        'Directory.Read.All'
+                        'Device.Read.All'
+                    )
+                }
+                if ($TenantId) { $connectParams['TenantId'] = $TenantId }
+
+                Connect-MgGraph @connectParams -ErrorAction Stop | Out-Null
+                $graphConnected = $true
+                Write-Host "  ✓ " -ForegroundColor Green -NoNewline
+                Write-Host "Connected to Graph API" -ForegroundColor Green
+                Write-Host ""
+                Write-PolicyLensLog "Graph: Connected successfully (upfront auth)" -Level Info
+            }
+            catch {
+                Write-Host "  ✗ " -ForegroundColor Red -NoNewline
+                Write-Host "Graph connection failed: $_" -ForegroundColor Red
+                Write-Host "    Continuing without Intune data..." -ForegroundColor DarkYellow
+                Write-Host ""
+                Write-PolicyLensLog "Graph: Connection failed - $_ (continuing without Intune data)" -Level Warning
+                $IncludeGraph = $false
+            }
+        }
     }
 
     # --- Phase 1: Collect GPO data ---
@@ -1040,171 +1092,120 @@ function Invoke-PolicyLens {
     $groupData = $null
     $deploymentStatus = $null
 
-    if ($IncludeGraph) {
+    if ($IncludeGraph -and $graphConnected) {
         Write-PolicyLensLog "Phase 4: Graph collection started" -Level Info
-        # Connect to Graph once for all Graph-dependent functions
-        $graphModule = Get-Module -ListAvailable Microsoft.Graph.DeviceManagement -ErrorAction SilentlyContinue
-        if (-not $graphModule) {
-            Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
-            Write-Host " PHASE 4 " -ForegroundColor Cyan -NoNewline
-            Write-Host "─────────────────────────────────┤" -ForegroundColor DarkGray
+        $currentStep++
+        Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
+        Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+        Write-Host "MICROSOFT GRAPH API" -ForegroundColor Cyan -NoNewline
+        Write-Host " ──────────────┤" -ForegroundColor DarkGray
+
+        # Get policy data
+        Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "► " -ForegroundColor Yellow -NoNewline
+        Write-Host "Fetching Intune configuration profiles..." -ForegroundColor White
+        $graphData = Get-GraphPolicyData -TenantId $TenantId -GraphConnected
+        if ($graphData.Available) {
+            $totalProfiles = $graphData.Profiles.Count + $graphData.CompliancePolicies.Count + $graphData.SettingsCatalog.Count
             Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-            Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
-            Write-Host "Microsoft.Graph module not installed" -ForegroundColor Yellow
-            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-            Write-Host "  Install: " -ForegroundColor DarkGray -NoNewline
-            Write-Host "Install-Module Microsoft.Graph -Scope CurrentUser" -ForegroundColor DarkCyan
-            Write-PolicyLensLog "Phase 4: Microsoft.Graph module not installed - skipping" -Level Warning
+            Write-Host "✓ " -ForegroundColor Green -NoNewline
+            Write-Host "$totalProfiles" -ForegroundColor Green -NoNewline
+            Write-Host " profiles/policies" -ForegroundColor Gray
+            Write-PolicyLensLog "Phase 4: Intune profiles retrieved ($totalProfiles profiles)" -Level Info
         }
         else {
-            # Connect once
-            $currentStep++
-            Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
-            Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
-            Write-Host "MICROSOFT GRAPH API" -ForegroundColor Cyan -NoNewline
-            Write-Host " ──────────────┤" -ForegroundColor DarkGray
+            Write-PolicyLensLog "Phase 4: Intune profiles not available" -Level Warning
+        }
+
+        # Get app assignments
+        Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "► " -ForegroundColor Yellow -NoNewline
+        Write-Host "Fetching " -ForegroundColor White -NoNewline
+        Write-Host "Intune app assignments" -ForegroundColor Cyan -NoNewline
+        Write-Host "..." -ForegroundColor White
+        Write-PolicyLensLog "Phase 4: App assignments started" -Level Info
+        $appData = Get-DeviceAppAssignments -GraphConnected
+        $appCount = $appData.Apps.Count
+        $assignedCount = @($appData.AssignedApps).Count
+        Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+        Write-Host "✓ " -ForegroundColor Green -NoNewline
+        Write-Host "$appCount" -ForegroundColor Green -NoNewline
+        Write-Host " apps (" -ForegroundColor Gray -NoNewline
+        Write-Host "$assignedCount" -ForegroundColor Cyan -NoNewline
+        Write-Host " assigned)" -ForegroundColor Gray
+        Write-PolicyLensLog "Phase 4: App assignments complete ($appCount apps, $assignedCount assigned)" -Level Info
+
+        # Get group memberships
+        Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "► " -ForegroundColor Yellow -NoNewline
+        Write-Host "Fetching " -ForegroundColor White -NoNewline
+        Write-Host "Azure AD group memberships" -ForegroundColor Cyan -NoNewline
+        Write-Host "..." -ForegroundColor White
+        Write-PolicyLensLog "Phase 4: Group memberships started" -Level Info
+        $groupData = Get-DeviceGroupMemberships -GraphConnected
+        if ($groupData.DeviceFound) {
+            $groupCount = $groupData.Groups.Count
+            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+            Write-Host "✓ " -ForegroundColor Green -NoNewline
+            Write-Host "Device found • Member of " -ForegroundColor Gray -NoNewline
+            Write-Host "$groupCount" -ForegroundColor Green -NoNewline
+            Write-Host " groups" -ForegroundColor Gray
+            Write-PolicyLensLog "Phase 4: Group memberships complete ($groupCount groups)" -Level Info
+        }
+        else {
+            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+            Write-Host "○ " -ForegroundColor Yellow -NoNewline
+            Write-Host "Device not found in Azure AD" -ForegroundColor Yellow
+            Write-PolicyLensLog "Phase 4: Device not found in Azure AD" -Level Warning
+        }
+
+        # --- Deployment Verification (Optional) ---
+        if ($VerifyDeployment -and $groupData.DeviceFound -and $groupData.Device.DeviceId) {
             Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
             Write-Host "► " -ForegroundColor Yellow -NoNewline
-            Write-Host "Connecting to Microsoft Graph..." -ForegroundColor White
+            Write-Host "Verifying " -ForegroundColor White -NoNewline
+            Write-Host "deployment status" -ForegroundColor Cyan -NoNewline
+            Write-Host "..." -ForegroundColor White
+            Write-PolicyLensLog "Deployment Verification: Started" -Level Info
             try {
-                $connectParams = @{
-                    Scopes = @(
-                        'DeviceManagementConfiguration.Read.All'
-                        'DeviceManagementManagedDevices.Read.All'
-                        'DeviceManagementApps.Read.All'
-                        'Directory.Read.All'
-                        'Device.Read.All'
-                    )
-                }
-                if ($TenantId) { $connectParams['TenantId'] = $TenantId }
-
-                Connect-MgGraph @connectParams -ErrorAction Stop | Out-Null
-                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                Write-Host "✓ " -ForegroundColor Green -NoNewline
-                Write-Host "Connected to Graph API" -ForegroundColor Green
-                Write-PolicyLensLog "Phase 4: Graph connected successfully" -Level Info
-
-                # Get policy data
-                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                Write-Host "  Fetching Intune configuration profiles..." -ForegroundColor Gray
-                $graphData = Get-GraphPolicyData -TenantId $TenantId -GraphConnected
-                if ($graphData.Available) {
-                    $totalProfiles = $graphData.Profiles.Count + $graphData.CompliancePolicies.Count + $graphData.SettingsCatalog.Count
-                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                    Write-Host "  ✓ " -ForegroundColor Green -NoNewline
-                    Write-Host "$totalProfiles" -ForegroundColor Green -NoNewline
-                    Write-Host " profiles/policies" -ForegroundColor Gray
-                    Write-PolicyLensLog "Phase 4: Intune profiles retrieved ($totalProfiles profiles)" -Level Info
-                }
-                else {
-                    Write-PolicyLensLog "Phase 4: Intune profiles not available" -Level Warning
-                }
-
-                # Get app assignments
-                Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
-                Write-Host "► " -ForegroundColor Yellow -NoNewline
-                Write-Host "Fetching " -ForegroundColor White -NoNewline
-                Write-Host "Intune app assignments" -ForegroundColor Cyan -NoNewline
-                Write-Host "...          │" -ForegroundColor White
-                Write-PolicyLensLog "Phase 4: App assignments started" -Level Info
-                $appData = Get-DeviceAppAssignments -GraphConnected
-                $appCount = $appData.Apps.Count
-                $assignedCount = @($appData.AssignedApps).Count
-                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                Write-Host "✓ " -ForegroundColor Green -NoNewline
-                Write-Host "$appCount" -ForegroundColor Green -NoNewline
-                Write-Host " apps (" -ForegroundColor Gray -NoNewline
-                Write-Host "$assignedCount" -ForegroundColor Cyan -NoNewline
-                Write-Host " assigned)" -ForegroundColor Gray
-                Write-PolicyLensLog "Phase 4: App assignments complete ($appCount apps, $assignedCount assigned)" -Level Info
-
-                # Get group memberships
-                Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
-                Write-Host "► " -ForegroundColor Yellow -NoNewline
-                Write-Host "Fetching " -ForegroundColor White -NoNewline
-                Write-Host "Azure AD group memberships" -ForegroundColor Cyan -NoNewline
-                Write-Host "...  │" -ForegroundColor White
-                Write-PolicyLensLog "Phase 4: Group memberships started" -Level Info
-                $groupData = Get-DeviceGroupMemberships -GraphConnected
-                if ($groupData.DeviceFound) {
-                    $groupCount = $groupData.Groups.Count
+                $deploymentStatus = Get-DeviceDeploymentStatus -AzureADDeviceId $groupData.Device.DeviceId -GraphConnected
+                if ($deploymentStatus.DeviceFound) {
+                    $profileCount = @($deploymentStatus.ProfileStates).Count
+                    $complianceCount = @($deploymentStatus.ComplianceStates).Count
+                    $appliedCount = @($deploymentStatus.ProfileStates | Where-Object { $_.State -eq 'applied' }).Count
                     Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
                     Write-Host "✓ " -ForegroundColor Green -NoNewline
-                    Write-Host "Device found • Member of " -ForegroundColor Gray -NoNewline
-                    Write-Host "$groupCount" -ForegroundColor Green -NoNewline
-                    Write-Host " groups" -ForegroundColor Gray
-                    Write-PolicyLensLog "Phase 4: Group memberships complete ($groupCount groups)" -Level Info
+                    Write-Host "$profileCount" -ForegroundColor Green -NoNewline
+                    Write-Host " profiles (" -ForegroundColor Gray -NoNewline
+                    Write-Host "$appliedCount" -ForegroundColor Cyan -NoNewline
+                    Write-Host " applied), " -ForegroundColor Gray -NoNewline
+                    Write-Host "$complianceCount" -ForegroundColor Green -NoNewline
+                    Write-Host " compliance policies" -ForegroundColor Gray
+                    Write-PolicyLensLog "Deployment Verification: Complete ($profileCount profiles, $complianceCount compliance)" -Level Info
                 }
                 else {
                     Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
                     Write-Host "○ " -ForegroundColor Yellow -NoNewline
-                    Write-Host "Device not found in Azure AD" -ForegroundColor Yellow
-                    Write-PolicyLensLog "Phase 4: Device not found in Azure AD" -Level Warning
+                    Write-Host "Device not found in Intune" -ForegroundColor Yellow
+                    Write-PolicyLensLog "Deployment Verification: Device not in Intune" -Level Warning
                 }
-
-                # --- Deployment Verification (Optional) ---
-                if ($VerifyDeployment -and $groupData.DeviceFound -and $groupData.Device.DeviceId) {
-                    Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
-                    Write-Host "► " -ForegroundColor Yellow -NoNewline
-                    Write-Host "Verifying " -ForegroundColor White -NoNewline
-                    Write-Host "deployment status" -ForegroundColor Cyan -NoNewline
-                    Write-Host "...            │" -ForegroundColor White
-                    Write-PolicyLensLog "Deployment Verification: Started" -Level Info
-                    try {
-                        $deploymentStatus = Get-DeviceDeploymentStatus -AzureADDeviceId $groupData.Device.DeviceId -GraphConnected
-                        if ($deploymentStatus.DeviceFound) {
-                            $profileCount = @($deploymentStatus.ProfileStates).Count
-                            $complianceCount = @($deploymentStatus.ComplianceStates).Count
-                            $appliedCount = @($deploymentStatus.ProfileStates | Where-Object { $_.State -eq 'applied' }).Count
-                            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                            Write-Host "✓ " -ForegroundColor Green -NoNewline
-                            Write-Host "$profileCount" -ForegroundColor Green -NoNewline
-                            Write-Host " profiles (" -ForegroundColor Gray -NoNewline
-                            Write-Host "$appliedCount" -ForegroundColor Cyan -NoNewline
-                            Write-Host " applied), " -ForegroundColor Gray -NoNewline
-                            Write-Host "$complianceCount" -ForegroundColor Green -NoNewline
-                            Write-Host " compliance policies" -ForegroundColor Gray
-                            Write-PolicyLensLog "Deployment Verification: Complete ($profileCount profiles, $complianceCount compliance)" -Level Info
-                        }
-                        else {
-                            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                            Write-Host "○ " -ForegroundColor Yellow -NoNewline
-                            Write-Host "Device not found in Intune" -ForegroundColor Yellow
-                            Write-PolicyLensLog "Deployment Verification: Device not in Intune" -Level Warning
-                        }
-                    }
-                    catch {
-                        Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                        Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
-                        Write-Host "Could not verify deployment status" -ForegroundColor Yellow
-                        Write-PolicyLensLog "Deployment Verification: Failed - $_" -Level Warning
-                    }
-                }
-
             }
             catch {
                 Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                Write-Host "✗ " -ForegroundColor Red -NoNewline
-                Write-Host "Graph connection failed: $_" -ForegroundColor Red
-                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-                Write-Host "  Continuing with local data only" -ForegroundColor DarkYellow
-                Write-PolicyLensLog "Phase 4: Graph connection failed - $_" -Level Error
-            }
-            finally {
-                # Always disconnect from Graph if we connected
-                Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-                Write-PolicyLensLog "Graph: Disconnected" -Level Info
+                Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
+                Write-Host "Could not verify deployment status" -ForegroundColor Yellow
+                Write-PolicyLensLog "Deployment Verification: Failed - $_" -Level Warning
             }
         }
     }
-    else {
+    elseif (-not $IncludeGraph) {
         Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
         Write-Host " [Step -/$totalSteps] " -ForegroundColor DarkGray -NoNewline
         Write-Host "MICROSOFT GRAPH API" -ForegroundColor DarkGray -NoNewline
         Write-Host " ──────────────┤" -ForegroundColor DarkGray
         Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
         Write-Host "○ " -ForegroundColor DarkGray -NoNewline
-        Write-Host "Skipped (use -IncludeGraph to enable)" -ForegroundColor DarkGray
+        Write-Host "Skipped (remove -SkipIntune to enable)" -ForegroundColor DarkGray
         Write-PolicyLensLog "Phase 4: Skipped (IncludeGraph not specified)" -Level Info
     }
 
@@ -1373,6 +1374,12 @@ function Invoke-PolicyLens {
     Write-Host ""
 
     Write-PolicyLensLog "PolicyLens finished (${duration}s)" -Level Info
+
+    # Disconnect from Graph if we connected
+    if ($graphConnected) {
+        Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+        Write-PolicyLensLog "Graph: Disconnected" -Level Info
+    }
 
     return $result
 }
