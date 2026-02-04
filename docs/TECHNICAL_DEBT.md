@@ -67,9 +67,9 @@ Code review completed: 2026-01-28
 - **Fix:** Remove or implement usage
 
 ### Hardcoded Version
-- **Files:** `Invoke-PolicyLens.ps1`, `ConvertTo-JsonExport.ps1`, `PolicyLensViewer.html`
-- **Issue:** Version "1.0.0" hardcoded in 3 places
-- **Fix:** Read from module manifest or create `Config/PolicyLens.config.psd1`
+- **Files:** `Invoke-PolicyLens.ps1`, `ConvertTo-JsonExport.ps1`
+- **Issue:** Version string hardcoded in multiple places (currently "1.3.0")
+- **Fix:** Read from module manifest (`PolicyLens.psd1`) or create `Config/PolicyLens.config.psd1`
 
 ### Missing Inline Comments
 - **File:** `Public/Compare-PolicyOverlap.ps1` lines 66-102
