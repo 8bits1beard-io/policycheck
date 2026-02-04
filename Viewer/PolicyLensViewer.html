@@ -1383,8 +1383,8 @@
         }
 
         function validateSchema(data) {
-            // Accept schema versions 1.0 through 1.4
-            const validVersions = ["1.0", "1.1", "1.2", "1.3", "1.4"];
+            // Accept schema versions 1.0 through 1.5
+            const validVersions = ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"];
             return data && validVersions.includes(data.schemaVersion);
         }
 
@@ -2342,10 +2342,12 @@
 
             const groupData = device.groupData;
             const deviceGroupIds = getDeviceGroupIds(groupData);
+            const verificationData = device.verificationData;
             const allApps = appData.AssignedApps || [];
             const totalAppsInTenant = appData.Apps?.length || 0;
             const localApps = appData.LocalApps || [];
-            const hasLocalApps = localApps.length > 0;
+            // Show install status column if we have Graph app states OR local registry data
+            const hasAppStatusData = (verificationData?.appStates?.length > 0) || (localApps.length > 0);
 
             // Filter apps to only those assigned to this device
             const applicableApps = allApps.filter(app => appAppliesToDevice(app, deviceGroupIds));
@@ -2412,7 +2414,7 @@
             // Helper to render app table
             const renderAppTable = (apps, title, titleColor) => {
                 if (apps.length === 0) return '';
-                const statusHeader = hasLocalApps ? '<th>Install Status</th>' : '';
+                const statusHeader = hasAppStatusData ? '<th>Install Status</th>' : '';
                 return `
                     <h3 style="margin: 15px 0 10px; color: ${titleColor};">${title} (${apps.length})</h3>
                     <div class="table-wrapper">
@@ -2431,9 +2433,9 @@
                             <tbody>
                                 ${apps.map(app => {
                                     const assignmentReason = getAppAssignmentReason(app, deviceGroupIds, groupData);
-                                    const installStatus = hasLocalApps ? getAppInstallationStatus(app.Id, localApps) : null;
-                                    const statusCell = hasLocalApps ? `<td>${renderVerificationStatusTag(installStatus)}</td>` : '';
-                                    const rowClass = hasLocalApps && installStatus ? `status-${installStatus.cssClass}` : '';
+                                    const installStatus = hasAppStatusData ? getAppInstallationStatus(app.Id, app.DisplayName, localApps, verificationData) : null;
+                                    const statusCell = hasAppStatusData ? `<td>${renderVerificationStatusTag(installStatus)}</td>` : '';
+                                    const rowClass = hasAppStatusData && installStatus ? `status-${installStatus.cssClass}` : '';
                                     return `
                                         <tr class="${rowClass}">
                                             <td><strong>${escapeHtml(app.DisplayName || 'Unknown App')}</strong></td>
@@ -2715,36 +2717,56 @@
             return stateMap[state.State] || { state: state.State, label: state.State, cssClass: 'unknown' };
         }
 
-        function getAppInstallationStatus(appId, localApps) {
-            // Check LocalApps array for matching app
-            if (!localApps || localApps.length === 0) {
-                return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
+        function getAppInstallationStatus(appId, appName, localApps, verificationData) {
+            // Priority 1: Graph-based verification data (accurate Intune status)
+            if (verificationData?.appStates && verificationData.appStates.length > 0) {
+                const normalizeForComparison = (str) => (str || '').toLowerCase().trim();
+                const graphState = verificationData.appStates.find(
+                    s => s.AppId === appId || normalizeForComparison(s.AppName) === normalizeForComparison(appName)
+                );
+                if (graphState) {
+                    const stateMap = {
+                        'installed':      { state: 'installed', label: 'Installed', cssClass: 'installed' },
+                        'notApplicable':  { state: 'notApplicable', label: 'Not Applicable', cssClass: 'no-status', tooltip: 'Intune determined this app is not applicable to this device (requirements not met or filters exclude it)' },
+                        'failed':         { state: 'failed', label: 'Failed', cssClass: 'error' },
+                        'notInstalled':   { state: 'notInstalled', label: 'Not Installed', cssClass: 'not-installed' },
+                        'pending':        { state: 'pending', label: 'Pending', cssClass: 'pending' },
+                        'unknown':        { state: 'unknown', label: 'Unknown', cssClass: 'unknown' }
+                    };
+                    return stateMap[graphState.State] || { state: graphState.State, label: graphState.State, cssClass: 'unknown' };
+                }
             }
 
-            const localApp = localApps.find(la => la.AppId === appId);
-            if (!localApp) {
+            // Priority 2: Local registry data (fallback)
+            if (localApps && localApps.length > 0) {
+                const localApp = localApps.find(la => la.AppId === appId);
+                if (localApp) {
+                    // Use the InstallState property if available, otherwise derive from Result
+                    if (localApp.InstallState) {
+                        const stateMap = {
+                            'Installed': { state: 'installed', label: 'Installed', cssClass: 'installed' },
+                            'Pending': { state: 'pending', label: 'Pending', cssClass: 'pending' },
+                            'Failed': { state: 'failed', label: 'Failed', cssClass: 'error' },
+                            'Unknown': { state: 'unknown', label: 'Unknown', cssClass: 'unknown' }
+                        };
+                        return stateMap[localApp.InstallState] || { state: 'unknown', label: localApp.InstallState, cssClass: 'unknown' };
+                    }
+
+                    // Fallback to Result code interpretation
+                    if (localApp.Result === 1) {
+                        return { state: 'installed', label: 'Installed', cssClass: 'installed' };
+                    } else if (localApp.Result === 0) {
+                        return { state: 'pending', label: 'Pending', cssClass: 'pending' };
+                    } else {
+                        return { state: 'failed', label: 'Failed', cssClass: 'error' };
+                    }
+                }
+                // App not found in local registry - only mark as "Not Installed" if no Graph data
                 return { state: 'not-installed', label: 'Not Installed', cssClass: 'not-installed' };
             }
 
-            // Use the InstallState property if available, otherwise derive from Result
-            if (localApp.InstallState) {
-                const stateMap = {
-                    'Installed': { state: 'installed', label: 'Installed', cssClass: 'installed' },
-                    'Pending': { state: 'pending', label: 'Pending', cssClass: 'pending' },
-                    'Failed': { state: 'failed', label: 'Failed', cssClass: 'error' },
-                    'Unknown': { state: 'unknown', label: 'Unknown', cssClass: 'unknown' }
-                };
-                return stateMap[localApp.InstallState] || { state: 'unknown', label: localApp.InstallState, cssClass: 'unknown' };
-            }
-
-            // Fallback to Result code interpretation
-            if (localApp.Result === 1) {
-                return { state: 'installed', label: 'Installed', cssClass: 'installed' };
-            } else if (localApp.Result === 0) {
-                return { state: 'pending', label: 'Pending', cssClass: 'pending' };
-            } else {
-                return { state: 'failed', label: 'Failed', cssClass: 'error' };
-            }
+            // No data available
+            return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
         }
 
         function renderVerificationStatusTag(status) {

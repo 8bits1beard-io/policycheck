@@ -38,6 +38,7 @@ function Get-DeviceDeploymentStatus {
             IntuneDeviceId   = $null
             ProfileStates    = @()
             ComplianceStates = @()
+            AppStates        = @()
             CollectedAt      = Get-Date
         }
     }
@@ -62,6 +63,7 @@ function Get-DeviceDeploymentStatus {
                 IntuneDeviceId   = $null
                 ProfileStates    = @()
                 ComplianceStates = @()
+                AppStates        = @()
                 CollectedAt      = Get-Date
             }
         }
@@ -89,6 +91,7 @@ function Get-DeviceDeploymentStatus {
                 IntuneDeviceId   = $null
                 ProfileStates    = @()
                 ComplianceStates = @()
+                AppStates        = @()
                 CollectedAt      = Get-Date
             }
         }
@@ -100,6 +103,7 @@ function Get-DeviceDeploymentStatus {
             IntuneDeviceId   = $null
             ProfileStates    = @()
             ComplianceStates = @()
+            AppStates        = @()
             CollectedAt      = Get-Date
         }
     }
@@ -197,7 +201,51 @@ function Get-DeviceDeploymentStatus {
         Write-Warning "Failed to retrieve compliance policy states: $_"
     }
 
-    # --- 6. Disconnect (only if we connected) ---
+    # --- 6. Get app installation states ---
+    $appStates = @()
+    try {
+        Write-Host "        Fetching app installation states..." -ForegroundColor Gray
+        $uri = "https://graph.microsoft.com/beta/deviceManagement/managedDevices/$intuneDeviceId/mobileAppIntentAndStates"
+        $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
+
+        $allAppStates = @($response.value)
+        while ($response.'@odata.nextLink') {
+            $response = Invoke-MgGraphRequest -Uri $response.'@odata.nextLink' -Method GET -ErrorAction Stop
+            $allAppStates += $response.value
+        }
+
+        Write-Verbose "Retrieved $($allAppStates.Count) app intent and state entries."
+
+        $appStates = @(foreach ($appState in $allAppStates) {
+            foreach ($state in $appState.mobileAppList) {
+                $normalizedState = switch ($state.installState) {
+                    'installed'         { 'installed' }
+                    'notApplicable'     { 'notApplicable' }
+                    'failed'            { 'failed' }
+                    'notInstalled'      { 'notInstalled' }
+                    'pending'           { 'pending' }
+                    'pendingInstall'    { 'pending' }
+                    'unknown'           { 'unknown' }
+                    default             { 'unknown' }
+                }
+
+                [PSCustomObject]@{
+                    AppId           = $state.applicationId
+                    AppName         = $state.displayName
+                    AppVersion      = $state.displayVersion
+                    State           = $normalizedState
+                    OriginalState   = $state.installState
+                    Intent          = $appState.mobileAppIntent
+                    LastReported    = $appState.lastModifiedDateTime
+                }
+            }
+        })
+    }
+    catch {
+        Write-Warning "Failed to retrieve app installation states: $_"
+    }
+
+    # --- 7. Disconnect (only if we connected) ---
     if (-not $GraphConnected) {
         try {
             Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
@@ -212,6 +260,7 @@ function Get-DeviceDeploymentStatus {
         DeviceName       = $deviceName
         ProfileStates    = $profileStates
         ComplianceStates = $complianceStates
+        AppStates        = $appStates
         CollectedAt      = Get-Date
     }
 }

@@ -111,9 +111,9 @@ function ConvertTo-JsonExport {
 
         # Build the complete export object
         $exportObject = [ordered]@{
-            schemaVersion = "1.4"
+            schemaVersion = "1.5"
             exportedAt    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-            exportedBy    = "PolicyLens v1.4.0"
+            exportedBy    = "PolicyLens v1.5.0"
             device        = $deviceInfo
             gpoData       = if ($Result.PSObject.Properties['GPOData']) { $Result.GPOData } else { $null }
             mdmData       = if ($Result.PSObject.Properties['MDMData']) { $Result.MDMData } else { $null }
@@ -133,12 +133,13 @@ function ConvertTo-JsonExport {
             } else { $null }
             verificationData = if ($Result.PSObject.Properties['DeploymentStatus'] -and $Result.DeploymentStatus) {
                 [ordered]@{
-                    enabled         = $true
-                    collectedAt     = $Result.DeploymentStatus.CollectedAt
-                    deviceFound     = $Result.DeploymentStatus.DeviceFound
-                    intuneDeviceId  = $Result.DeploymentStatus.IntuneDeviceId
-                    profileStates   = $Result.DeploymentStatus.ProfileStates
+                    enabled          = $true
+                    collectedAt      = $Result.DeploymentStatus.CollectedAt
+                    deviceFound      = $Result.DeploymentStatus.DeviceFound
+                    intuneDeviceId   = $Result.DeploymentStatus.IntuneDeviceId
+                    profileStates    = $Result.DeploymentStatus.ProfileStates
                     complianceStates = $Result.DeploymentStatus.ComplianceStates
+                    appStates        = $Result.DeploymentStatus.AppStates
                 }
             } else { $null }
             gpoVerificationData = if ($Result.PSObject.Properties['GPOVerification'] -and $Result.GPOVerification -and $Result.GPOVerification.Available) {
