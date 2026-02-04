@@ -100,6 +100,11 @@ function Get-DeviceAppAssignments {
                 }
             })
 
+            # Get version - different app types store version in different properties
+            $appVersion = $app.displayVersion
+            if (-not $appVersion) { $appVersion = $app.version }
+            if (-not $appVersion) { $appVersion = $app.productVersion }
+
             [PSCustomObject]@{
                 Id           = $app.id
                 DisplayName  = $app.displayName
@@ -107,6 +112,7 @@ function Get-DeviceAppAssignments {
                 AppType      = $appType
                 OdataType    = $odataType
                 Publisher    = $app.publisher
+                Version      = $appVersion
                 CreatedDate  = $app.createdDateTime
                 LastModified = $app.lastModifiedDateTime
                 Assignments  = $assignments

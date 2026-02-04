@@ -152,11 +152,13 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
             })
 
             [PSCustomObject]@{
-                Id          = $policy.id
-                DisplayName = $policy.displayName
-                Description = $policy.description
-                OdataType   = $policy.'@odata.type'
-                Assignments = $assignments
+                Id              = $policy.id
+                DisplayName     = $policy.displayName
+                Description     = $policy.description
+                OdataType       = $policy.'@odata.type'
+                CreatedDateTime = $policy.createdDateTime
+                LastModified    = $policy.lastModifiedDateTime
+                Assignments     = $assignments
             }
         })
 
@@ -200,12 +202,14 @@ Then re-run with -IncludeGraph to fetch Intune policy details.
             })
 
             [PSCustomObject]@{
-                Id           = $policy.id
-                Name         = $policy.name
-                Description  = $policy.description
-                Platforms    = $policy.platforms
-                Technologies = $policy.technologies
-                Assignments  = $assignments
+                Id              = $policy.id
+                Name            = $policy.name
+                Description     = $policy.description
+                Platforms       = $policy.platforms
+                Technologies    = $policy.technologies
+                CreatedDateTime = $policy.createdDateTime
+                LastModified    = $policy.lastModifiedDateTime
+                Assignments     = $assignments
             }
         })
 

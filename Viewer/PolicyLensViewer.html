@@ -2423,8 +2423,10 @@
                                     <th>Name</th>
                                     <th>Type</th>
                                     <th>Publisher</th>
+                                    <th>Version</th>
                                     <th>Assigned Via</th>
                                     ${statusHeader}
+                                    <th>Last Modified</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2438,8 +2440,10 @@
                                             <td><strong>${escapeHtml(app.DisplayName || 'Unknown App')}</strong></td>
                                             <td style="font-size: 0.85rem;">${escapeHtml(app.AppType || '-')}</td>
                                             <td style="font-size: 0.85rem;">${escapeHtml(app.Publisher || '-')}</td>
+                                            <td style="font-size: 0.85rem;">${escapeHtml(app.Version || '-')}</td>
                                             <td>${assignmentReason}</td>
                                             ${statusCell}
+                                            <td>${app.LastModified ? new Date(app.LastModified).toLocaleDateString() : '-'}</td>
                                         </tr>
                                     `;
                                 }).join('')}
@@ -2817,6 +2821,7 @@
                                     <th>Type</th>
                                     <th>Assigned Via</th>
                                     ${statusHeader}
+                                    <th>Last Modified</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2832,6 +2837,7 @@
                                             <td style="font-size: 0.85rem;">${escapeHtml(policyType)}</td>
                                             <td>${assignmentReason}</td>
                                             ${statusCell}
+                                            <td>${p.LastModified ? new Date(p.LastModified).toLocaleDateString() : '-'}</td>
                                         </tr>
                                     `;
                                 }).join('')}
@@ -2855,6 +2861,7 @@
                                     <th>Technologies</th>
                                     <th>Assigned Via</th>
                                     ${statusHeader}
+                                    <th>Last Modified</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2870,6 +2877,7 @@
                                             <td>${escapeHtml(p.Technologies || '-')}</td>
                                             <td>${assignmentReason}</td>
                                             ${statusCell}
+                                            <td>${p.LastModified ? new Date(p.LastModified).toLocaleDateString() : '-'}</td>
                                         </tr>
                                     `;
                                 }).join('')}
