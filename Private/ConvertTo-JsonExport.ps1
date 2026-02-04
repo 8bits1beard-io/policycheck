@@ -109,7 +109,7 @@ function ConvertTo-JsonExport {
 
         # Build the complete export object
         $exportObject = [ordered]@{
-            schemaVersion = "1.2"
+            schemaVersion = "1.3"
             exportedAt    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             exportedBy    = "PolicyLens v1.2.0"
             device        = $deviceInfo
@@ -144,6 +144,23 @@ function ConvertTo-JsonExport {
                     notAppliedCount    = $Result.GPOVerification.NotAppliedCount
                     disabledCount      = $Result.GPOVerification.DisabledCount
                     collectedAt        = $Result.GPOVerification.CollectedAt
+                }
+            } else { $null }
+            sccmVerificationData = if ($Result.PSObject.Properties['SCCMVerification'] -and $Result.SCCMVerification -and $Result.SCCMVerification.Available) {
+                [ordered]@{
+                    enabled               = $true
+                    siteServerReachable   = $Result.SCCMVerification.SiteServerReachable
+                    deviceFound           = $Result.SCCMVerification.DeviceFound
+                    siteServer            = $Result.SCCMVerification.SiteServer
+                    siteCode              = $Result.SCCMVerification.SiteCode
+                    deviceResourceId      = $Result.SCCMVerification.DeviceResourceId
+                    collectionMemberships = $Result.SCCMVerification.CollectionMemberships
+                    verificationStates    = $Result.SCCMVerification.VerificationStates
+                    installedCount        = $Result.SCCMVerification.InstalledCount
+                    pendingCount          = $Result.SCCMVerification.PendingCount
+                    failedCount           = $Result.SCCMVerification.FailedCount
+                    notApplicableCount    = $Result.SCCMVerification.NotApplicableCount
+                    collectedAt           = $Result.SCCMVerification.CollectedAt
                 }
             } else { $null }
         }

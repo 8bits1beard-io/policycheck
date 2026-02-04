@@ -15,6 +15,7 @@
         'Get-SettingsCatalogMappings'
         'Get-DeviceDeploymentStatus'
         'Get-GPOVerificationStatus'
+        'Get-SCCMVerificationStatus'
         'Compare-PolicyOverlap'
         'Get-SCCMPolicyData'
     )

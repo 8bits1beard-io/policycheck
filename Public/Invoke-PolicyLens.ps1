@@ -28,6 +28,16 @@ function Invoke-PolicyLens {
         Azure AD tenant ID for Graph authentication.
     .PARAMETER SkipSCCM
         Skip SCCM/ConfigMgr client data collection via WMI.
+    .PARAMETER SCCMSiteServer
+        SCCM site server (SMS Provider) for deployment verification. Auto-discovered if not specified.
+    .PARAMETER SCCMSiteCode
+        SCCM site code for deployment verification. Auto-discovered if not specified.
+    .PARAMETER SCCMCredential
+        PSCredential for authenticating to the SCCM site server. Required for deployment verification
+        when running from a machine that doesn't have direct access to the site server.
+    .PARAMETER SkipSCCMVerify
+        Skip SCCM deployment verification that compares assigned deployments against installed state.
+        Client-side SCCM data is still collected unless -SkipSCCM is also specified.
     .PARAMETER SkipMDMDiag
         Skip running mdmdiagnosticstool (can be slow on some devices).
     .PARAMETER SuggestMappings
@@ -73,6 +83,14 @@ function Invoke-PolicyLens {
 
         [switch]$SkipSCCM,
 
+        [string]$SCCMSiteServer,
+
+        [string]$SCCMSiteCode,
+
+        [PSCredential]$SCCMCredential,
+
+        [switch]$SkipSCCMVerify,
+
         [switch]$SkipMDMDiag,
 
         [switch]$SuggestMappings,
@@ -86,6 +104,7 @@ function Invoke-PolicyLens {
     $IncludeGraph = -not $SkipIntune
     $VerifyDeployment = -not $SkipVerify -and -not $SkipIntune  # Verification requires Graph
     $VerifyGPO = -not $SkipGPOVerify
+    $VerifySCCM = -not $SkipSCCMVerify -and -not $SkipSCCM  # SCCM verification requires client data
 
     # Validate parameters
     if ($SuggestMappings -and $SkipIntune) {
@@ -116,19 +135,21 @@ function Invoke-PolicyLens {
     if ($SuggestMappings) { $totalSteps++ }  # Add mapping suggestions step
     if ($VerifyDeployment) { $totalSteps++ }  # Add deployment verification step
     if ($VerifyGPO) { $totalSteps++ }  # Add GPO verification step
+    if ($VerifySCCM) { $totalSteps++ }  # Add SCCM verification step
     if ($isRemoteScan) {
         $totalSteps = if ($IncludeGraph) { 4 } else { 3 }
         if ($SkipSCCM) { $totalSteps-- }
         if ($SuggestMappings) { $totalSteps++ }
         if ($VerifyDeployment) { $totalSteps++ }
         if ($VerifyGPO) { $totalSteps++ }
+        if ($VerifySCCM) { $totalSteps++ }
     }
     $currentStep = 0
 
     # --- Start logging ---
     Write-PolicyLensLog "========================================" -Level Info
     Write-PolicyLensLog "PolicyLens started (v1.2.0)" -Level Info
-    $logParams = "SkipIntune=$SkipIntune, SkipVerify=$SkipVerify, SkipGPOVerify=$SkipGPOVerify, SkipSCCM=$SkipSCCM, SkipMDMDiag=$SkipMDMDiag"
+    $logParams = "SkipIntune=$SkipIntune, SkipVerify=$SkipVerify, SkipGPOVerify=$SkipGPOVerify, SkipSCCM=$SkipSCCM, SkipSCCMVerify=$SkipSCCMVerify, SkipMDMDiag=$SkipMDMDiag"
     if ($isRemoteScan) { $logParams += ", ComputerName=$ComputerName" }
     Write-PolicyLensLog "Parameters: $logParams" -Level Info
 
@@ -538,6 +559,58 @@ function Invoke-PolicyLens {
             Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
         }
 
+        # --- SCCM Verification (Remote Scan) ---
+        $sccmVerification = $null
+        if ($VerifySCCM -and $sccmData -and $sccmData.IsInstalled) {
+            Write-Host ""
+            Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
+            Write-Host " SCCM VERIFY " -ForegroundColor DarkYellow -NoNewline
+            Write-Host "──────────────────────────────┐" -ForegroundColor DarkGray
+            Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+            Write-Host "► " -ForegroundColor Yellow -NoNewline
+            Write-Host "Verifying SCCM deployment status..." -ForegroundColor White
+            Write-PolicyLensLog "SCCM Verification: Started (remote)" -Level Info
+            try {
+                $sccmVerification = Get-SCCMVerificationStatus `
+                    -SCCMData $sccmData `
+                    -ComputerName $deviceMetadata.ComputerName `
+                    -SiteServer $SCCMSiteServer `
+                    -SiteCode $SCCMSiteCode `
+                    -SiteCredential $SCCMCredential
+
+                if ($sccmVerification.Available) {
+                    $installedCount = $sccmVerification.InstalledCount
+                    $pendingCount = $sccmVerification.PendingCount
+                    $failedCount = $sccmVerification.FailedCount
+                    $collectionCount = @($sccmVerification.CollectionMemberships).Count
+                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "✓ " -ForegroundColor Green -NoNewline
+                    Write-Host "$collectionCount" -ForegroundColor Cyan -NoNewline
+                    Write-Host " collections • " -ForegroundColor Gray -NoNewline
+                    Write-Host "$installedCount" -ForegroundColor Green -NoNewline
+                    Write-Host " installed, " -ForegroundColor Gray -NoNewline
+                    Write-Host "$pendingCount" -ForegroundColor Yellow -NoNewline
+                    Write-Host " pending, " -ForegroundColor Gray -NoNewline
+                    Write-Host "$failedCount" -ForegroundColor Red -NoNewline
+                    Write-Host " failed" -ForegroundColor Gray
+                    Write-PolicyLensLog "SCCM Verification: Complete ($installedCount installed, $pendingCount pending, $failedCount failed)" -Level Info
+                }
+                elseif ($sccmVerification.Message) {
+                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "○ " -ForegroundColor Yellow -NoNewline
+                    Write-Host "$($sccmVerification.Message)" -ForegroundColor Yellow
+                    Write-PolicyLensLog "SCCM Verification: $($sccmVerification.Message)" -Level Warning
+                }
+            }
+            catch {
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
+                Write-Host "Could not verify SCCM status" -ForegroundColor Yellow
+                Write-PolicyLensLog "SCCM Verification: Failed - $_" -Level Warning
+            }
+            Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
+        }
+
         # --- Analysis ---
         Write-Host ""
         Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
@@ -644,6 +717,7 @@ function Invoke-PolicyLens {
             MappingSuggestions = $mappingSuggestions
             DeploymentStatus = $deploymentStatus
             GPOVerification = $gpoVerification
+            SCCMVerification = $sccmVerification
         }
 
         # Export to JSON with device metadata from remote
@@ -886,6 +960,73 @@ function Invoke-PolicyLens {
         Write-Host "○ " -ForegroundColor DarkGray -NoNewline
         Write-Host "Skipped (use without -SkipSCCM to enable)" -ForegroundColor DarkGray
         Write-PolicyLensLog "Phase 3: Skipped (SkipSCCM specified)" -Level Info
+    }
+
+    # --- SCCM Deployment Verification (after SCCM collection) ---
+    $sccmVerification = $null
+    if ($VerifySCCM -and $sccmData -and $sccmData.IsInstalled) {
+        $currentStep++
+        Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
+        Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+        Write-Host "SCCM VERIFICATION" -ForegroundColor DarkYellow -NoNewline
+        Write-Host " ─────────────────┤" -ForegroundColor DarkGray
+        Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "► " -ForegroundColor Yellow -NoNewline
+        Write-Host "Verifying SCCM deployment status via site server..." -ForegroundColor White
+        Write-PolicyLensLog "SCCM Verification: Started" -Level Info
+        try {
+            $sccmVerification = Get-SCCMVerificationStatus `
+                -SCCMData $sccmData `
+                -SiteServer $SCCMSiteServer `
+                -SiteCode $SCCMSiteCode `
+                -SiteCredential $SCCMCredential
+
+            if ($sccmVerification.Available) {
+                $installedCount = $sccmVerification.InstalledCount
+                $pendingCount = $sccmVerification.PendingCount
+                $failedCount = $sccmVerification.FailedCount
+                $collectionCount = @($sccmVerification.CollectionMemberships).Count
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "✓ " -ForegroundColor Green -NoNewline
+                Write-Host "$collectionCount" -ForegroundColor Cyan -NoNewline
+                Write-Host " collections • " -ForegroundColor Gray -NoNewline
+                Write-Host "$installedCount" -ForegroundColor Green -NoNewline
+                Write-Host " installed, " -ForegroundColor Gray -NoNewline
+                Write-Host "$pendingCount" -ForegroundColor Yellow -NoNewline
+                Write-Host " pending, " -ForegroundColor Gray -NoNewline
+                Write-Host "$failedCount" -ForegroundColor Red -NoNewline
+                Write-Host " failed" -ForegroundColor Gray
+                Write-PolicyLensLog "SCCM Verification: Complete ($installedCount installed, $pendingCount pending, $failedCount failed)" -Level Info
+            }
+            elseif ($sccmVerification.SiteServerReachable -and -not $sccmVerification.DeviceFound) {
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "○ " -ForegroundColor Yellow -NoNewline
+                Write-Host "Device not found in SCCM database" -ForegroundColor Yellow
+                Write-PolicyLensLog "SCCM Verification: Device not found in SCCM" -Level Warning
+            }
+            elseif ($sccmVerification.Message) {
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "○ " -ForegroundColor Yellow -NoNewline
+                Write-Host "$($sccmVerification.Message)" -ForegroundColor Yellow
+                Write-PolicyLensLog "SCCM Verification: $($sccmVerification.Message)" -Level Warning
+            }
+        }
+        catch {
+            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+            Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
+            Write-Host "Could not verify SCCM deployment status: $_" -ForegroundColor Yellow
+            Write-PolicyLensLog "SCCM Verification: Failed - $_" -Level Warning
+        }
+    }
+    elseif (-not $VerifySCCM -and -not $SkipSCCM) {
+        Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
+        Write-Host " [Step -/$totalSteps] " -ForegroundColor DarkGray -NoNewline
+        Write-Host "SCCM VERIFICATION" -ForegroundColor DarkGray -NoNewline
+        Write-Host " ─────────────────┤" -ForegroundColor DarkGray
+        Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+        Write-Host "○ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "Skipped (use -SCCMCredential to enable)" -ForegroundColor DarkGray
+        Write-PolicyLensLog "SCCM Verification: Skipped (no credential provided)" -Level Info
     }
 
     # --- Phase 4: Optionally collect Graph data ---
@@ -1189,6 +1330,7 @@ function Invoke-PolicyLens {
         MappingSuggestions = $mappingSuggestions
         DeploymentStatus = $deploymentStatus
         GPOVerification = $gpoVerification
+        SCCMVerification = $sccmVerification
     }
 
     # Export to JSON

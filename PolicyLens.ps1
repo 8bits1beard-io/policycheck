@@ -28,6 +28,14 @@
     Find Intune Settings Catalog matches for unmapped GPO settings.
 .PARAMETER SkipSCCM
     Skip SCCM/ConfigMgr client data collection via WMI.
+.PARAMETER SCCMSiteServer
+    SCCM site server (SMS Provider) for deployment verification. Auto-discovered if not specified.
+.PARAMETER SCCMSiteCode
+    SCCM site code for deployment verification. Auto-discovered if not specified.
+.PARAMETER SCCMCredential
+    PSCredential for authenticating to the SCCM site server. Required for deployment verification.
+.PARAMETER SkipSCCMVerify
+    Skip SCCM deployment verification. Client-side SCCM data is still collected.
 .PARAMETER SkipMDMDiag
     Skip running mdmdiagnosticstool (can be slow on some devices).
 .PARAMETER OutputPath
@@ -63,6 +71,10 @@ param(
     [switch]$SuggestMappings,
     [string]$TenantId,
     [switch]$SkipSCCM,
+    [string]$SCCMSiteServer,
+    [string]$SCCMSiteCode,
+    [PSCredential]$SCCMCredential,
+    [switch]$SkipSCCMVerify,
     [switch]$SkipMDMDiag,
     [string]$OutputPath,
     [string]$LogPath
@@ -84,6 +96,10 @@ if ($SkipGPOVerify) { $params['SkipGPOVerify'] = $true }
 if ($SuggestMappings) { $params['SuggestMappings'] = $true }
 if ($TenantId) { $params['TenantId'] = $TenantId }
 if ($SkipSCCM) { $params['SkipSCCM'] = $true }
+if ($SCCMSiteServer) { $params['SCCMSiteServer'] = $SCCMSiteServer }
+if ($SCCMSiteCode) { $params['SCCMSiteCode'] = $SCCMSiteCode }
+if ($SCCMCredential) { $params['SCCMCredential'] = $SCCMCredential }
+if ($SkipSCCMVerify) { $params['SkipSCCMVerify'] = $true }
 if ($SkipMDMDiag) { $params['SkipMDMDiag'] = $true }
 if ($OutputPath) { $params['OutputPath'] = $OutputPath }
 if ($LogPath) { $params['LogPath'] = $LogPath }

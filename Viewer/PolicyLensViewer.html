@@ -1513,6 +1513,8 @@
             const gpoSettingsCount = device.gpoData?.RegistryPolicies?.length || 0;
             const mdmCount = device.mdmData?.IntunePolicyCount ?? ((device.mdmData?.DevicePolicies?.length || 0) + (device.mdmData?.UserPolicies?.length || 0));
             const sccmInstalled = device.sccmData?.IsInstalled || false;
+            const sccmVerification = device.sccmVerificationData;
+            const hasSCCMVerification = sccmVerification?.enabled;
             const analysis = device.analysis?.Summary || {};
             const matches = analysis.BothConfiguredMatch || 0;
             const conflicts = analysis.ValuesInConflict || 0;
@@ -1536,6 +1538,15 @@
             const applicableApps = allApps.filter(app => appAppliesToDevice(app, deviceGroupIds)).length;
             const hasGraphData = graphData.Available;
 
+            // SCCM verification summary
+            let sccmDescription = sccmInstalled ? 'ConfigMgr installed' : 'Not installed';
+            if (hasSCCMVerification) {
+                const installed = sccmVerification.installedCount || 0;
+                const pending = sccmVerification.pendingCount || 0;
+                const failed = sccmVerification.failedCount || 0;
+                sccmDescription = `${installed} OK, ${pending} pending, ${failed} failed`;
+            }
+
             return `
                 <div class="summary-section">
                     <div class="summary-section-header">Policy Sources (Applied on Device)</div>
@@ -1550,10 +1561,10 @@
                             <span class="label">MDM Policies</span>
                             <span class="description">From Intune/MDM</span>
                         </div>
-                        <div class="summary-card ${sccmInstalled ? 'green' : 'gray'} status" onclick="scrollToSection('section-sccm')" style="cursor:pointer;">
-                            <span class="number">${sccmInstalled ? 'Yes' : 'No'}</span>
+                        <div class="summary-card ${sccmInstalled ? (hasSCCMVerification ? 'cyan' : 'green') : 'gray'} status" onclick="scrollToSection('section-sccm')" style="cursor:pointer;">
+                            <span class="number">${sccmInstalled ? (hasSCCMVerification ? 'Verified' : 'Yes') : 'No'}</span>
                             <span class="label">SCCM Client</span>
-                            <span class="description">${sccmInstalled ? 'ConfigMgr installed' : 'Not installed'}</span>
+                            <span class="description">${sccmDescription}</span>
                         </div>
                     </div>
                 </div>
@@ -1883,8 +1894,37 @@
             `;
         }
 
+        // --- SCCM Verification Helper Function ---
+        function getSCCMVerificationStatus(deploymentName, deploymentType, sccmVerificationData) {
+            if (!sccmVerificationData?.enabled) {
+                return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
+            }
+
+            const state = sccmVerificationData.verificationStates?.find(s =>
+                s.DeploymentName === deploymentName && s.DeploymentType === deploymentType
+            );
+
+            if (!state) {
+                return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
+            }
+
+            const stateMap = {
+                'installed': { state: 'installed', label: 'Installed', cssClass: 'applied' },
+                'compliant': { state: 'compliant', label: 'Compliant', cssClass: 'applied' },
+                'pending': { state: 'pending', label: 'Pending', cssClass: 'pending' },
+                'failed': { state: 'failed', label: 'Failed', cssClass: 'error' },
+                'not-applicable': { state: 'not-applicable', label: 'Not Applicable', cssClass: 'unknown' },
+                'not-installed': { state: 'not-installed', label: 'Not Installed', cssClass: 'not-applied' },
+                'unknown': { state: 'unknown', label: 'Unknown', cssClass: 'unknown' }
+            };
+
+            return stateMap[state.Status] || { state: state.Status, label: state.StatusLabel || state.Status, cssClass: 'unknown' };
+        }
+
         function renderSCCMSection(device) {
             const sccm = device.sccmData;
+            const sccmVerification = device.sccmVerificationData;
+
             if (!sccm || !sccm.IsInstalled) {
                 return `
                     <div class="section" id="section-sccm">
@@ -1903,6 +1943,7 @@
             const apps = sccm.Applications || [];
             const baselines = sccm.Baselines || [];
             const updates = sccm.Updates || [];
+            const hasVerification = sccmVerification?.enabled;
 
             let clientHtml = `
                 <div class="info-box explanation">
@@ -1917,6 +1958,93 @@
                     ${clientInfo.ClientId ? `<div class="enrollment-item"><div class="key">Client ID</div><div class="value" style="font-size: 0.8rem;">${escapeHtml(clientInfo.ClientId)}</div></div>` : ''}
                 </div>
             `;
+
+            // --- SCCM Deployment Verification Section ---
+            let verificationHtml = '';
+            if (hasVerification) {
+                const verificationStates = sccmVerification.verificationStates || [];
+                const collections = sccmVerification.collectionMemberships || [];
+                const installedCount = sccmVerification.installedCount || 0;
+                const pendingCount = sccmVerification.pendingCount || 0;
+                const failedCount = sccmVerification.failedCount || 0;
+
+                // Collection memberships display
+                let collectionsHtml = '';
+                if (collections.length > 0) {
+                    collectionsHtml = `
+                        <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Collection Memberships (${collections.length})</h3>
+                        <div class="group-list">
+                            ${collections.map(c => `
+                                <span class="group-chip">${escapeHtml(c.Name || c.CollectionID)}</span>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                // Deployment status table
+                let deploymentTableHtml = '';
+                if (verificationStates.length > 0) {
+                    deploymentTableHtml = `
+                        <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">
+                            SCCM Deployment Status (${verificationStates.length})
+                            <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); margin-left: 10px;">
+                                <span style="color: var(--accent-green);">${installedCount} installed</span>,
+                                <span style="color: var(--accent-yellow);">${pendingCount} pending</span>,
+                                <span style="color: var(--accent-red);">${failedCount} failed</span>
+                            </span>
+                        </h3>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Deployment Name</th>
+                                        <th>Type</th>
+                                        <th>Collection</th>
+                                        <th>Intent</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${verificationStates.map(state => {
+                                        const statusClass = {
+                                            'installed': 'applied',
+                                            'compliant': 'applied',
+                                            'pending': 'pending',
+                                            'failed': 'error',
+                                            'not-installed': 'not-applied',
+                                            'not-applicable': 'unknown'
+                                        }[state.Status] || 'unknown';
+                                        const intentClass = state.Intent === 'Required' ? 'required' : 'available';
+                                        return `
+                                            <tr class="status-${statusClass}">
+                                                <td><strong>${escapeHtml(state.DeploymentName || '')}</strong></td>
+                                                <td>${escapeHtml(state.DeploymentType || '')}</td>
+                                                <td style="font-size: 0.85rem;">${escapeHtml(state.CollectionName || '')}</td>
+                                                <td><span class="app-intent ${intentClass}">${escapeHtml(state.Intent || '')}</span></td>
+                                                <td><span class="status-tag ${statusClass}">${escapeHtml(state.StatusLabel || state.Status || '')}</span></td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+
+                verificationHtml = `
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 10px; color: var(--accent-cyan);">
+                            <span style="margin-right: 8px;">&#9989;</span>Deployment Verification
+                        </h3>
+                        <div class="info-box info" style="margin-bottom: 15px;">
+                            Verified against site server: <strong>${escapeHtml(sccmVerification.siteServer || 'Unknown')}</strong>
+                            (Site Code: ${escapeHtml(sccmVerification.siteCode || 'Unknown')})
+                        </div>
+                        ${collectionsHtml}
+                        ${deploymentTableHtml}
+                    </div>
+                `;
+            }
 
             let appsHtml = '';
             if (apps.length > 0) {
@@ -2013,14 +2141,24 @@
                 `;
             }
 
+            // Build section header with verification summary if available
+            let headerText = `SCCM/ConfigMgr - ${apps.length} Apps, ${baselines.length} Baselines, ${updates.length} Updates`;
+            if (hasVerification) {
+                const installedCount = sccmVerification.installedCount || 0;
+                const pendingCount = sccmVerification.pendingCount || 0;
+                const failedCount = sccmVerification.failedCount || 0;
+                headerText += ` | Verified: ${installedCount} installed, ${pendingCount} pending, ${failedCount} failed`;
+            }
+
             return `
                 <div class="section" id="section-sccm">
                     <div class="section-header collapsed">
-                        <h2>SCCM/ConfigMgr - ${apps.length} Apps, ${baselines.length} Baselines, ${updates.length} Updates</h2>
+                        <h2>${headerText}</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
                         ${clientHtml}
+                        ${verificationHtml}
                         ${appsHtml}
                         ${baselinesHtml}
                         ${updatesHtml}
