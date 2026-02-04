@@ -521,6 +521,13 @@
             color: var(--text-secondary);
         }
 
+        .status-tag.no-status {
+            background: rgba(160, 160, 184, 0.15);
+            color: var(--text-secondary);
+            border: 1px dashed var(--text-secondary);
+            cursor: help;
+        }
+
         /* Assignment Filter badges */
         .filter-badge {
             display: inline-flex;
@@ -2700,21 +2707,28 @@
                 return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
             }
 
-            // Try to match by profile ID or name
-            const state = verificationData.profileStates.find(s =>
-                s.ProfileId === profileId ||
-                (s.ProfileName && profileName && s.ProfileName.toLowerCase() === profileName.toLowerCase())
-            );
+            // Try to match by profile name (ID matching is unreliable - API returns state IDs not policy IDs)
+            // Normalize names for comparison (trim, lowercase)
+            const normalizedProfileName = profileName?.toLowerCase().trim();
+            const state = verificationData.profileStates.find(s => {
+                const normalizedStateName = s.ProfileName?.toLowerCase().trim();
+                return normalizedStateName && normalizedProfileName && normalizedStateName === normalizedProfileName;
+            });
 
             if (!state) {
-                return { state: 'not-applied', label: 'Not Applied', cssClass: 'not-applied' };
+                // Policy is assigned to a group but has no deployment state - this typically means:
+                // - Assignment filter excluded this device
+                // - Policy targets a different platform/OS
+                // - Policy targets users, not devices
+                // - Intune hasn't processed it yet
+                return { state: 'no-status', label: 'No Status', cssClass: 'no-status', tooltip: 'Policy assigned to group but no deployment record. May be filtered by assignment filter, platform, or user targeting.' };
             }
 
             const stateMap = {
                 'applied': { state: 'applied', label: 'Applied', cssClass: 'applied' },
                 'pending': { state: 'pending', label: 'Pending', cssClass: 'pending' },
                 'error': { state: 'error', label: 'Error', cssClass: 'error' },
-                'notApplicable': { state: 'notApplicable', label: 'N/A', cssClass: 'unknown' },
+                'notApplicable': { state: 'notApplicable', label: 'N/A', cssClass: 'no-status', tooltip: 'Intune determined this policy is not applicable to this device' },
                 'unknown': { state: 'unknown', label: 'Unknown', cssClass: 'unknown' }
             };
 
@@ -2727,21 +2741,24 @@
                 return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
             }
 
-            // Try to match by policy ID or name
-            const state = verificationData.complianceStates.find(s =>
-                s.PolicyId === policyId ||
-                (s.PolicyName && policyName && s.PolicyName.toLowerCase() === policyName.toLowerCase())
-            );
+            // Try to match by policy name (ID matching is unreliable - API returns state IDs not policy IDs)
+            // Normalize names for comparison (trim, lowercase)
+            const normalizedPolicyName = policyName?.toLowerCase().trim();
+            const state = verificationData.complianceStates.find(s => {
+                const normalizedStateName = s.PolicyName?.toLowerCase().trim();
+                return normalizedStateName && normalizedPolicyName && normalizedStateName === normalizedPolicyName;
+            });
 
             if (!state) {
-                return { state: 'not-applied', label: 'Not Applied', cssClass: 'not-applied' };
+                // Policy is assigned to a group but has no deployment state
+                return { state: 'no-status', label: 'No Status', cssClass: 'no-status', tooltip: 'Policy assigned to group but no deployment record. May be filtered by assignment filter, platform, or user targeting.' };
             }
 
             const stateMap = {
                 'applied': { state: 'applied', label: 'Applied', cssClass: 'applied' },
                 'pending': { state: 'pending', label: 'Pending', cssClass: 'pending' },
                 'error': { state: 'error', label: 'Error', cssClass: 'error' },
-                'notApplicable': { state: 'notApplicable', label: 'N/A', cssClass: 'unknown' },
+                'notApplicable': { state: 'notApplicable', label: 'N/A', cssClass: 'no-status', tooltip: 'Intune determined this policy is not applicable to this device' },
                 'unknown': { state: 'unknown', label: 'Unknown', cssClass: 'unknown' }
             };
 
@@ -2781,7 +2798,8 @@
         }
 
         function renderVerificationStatusTag(status) {
-            return `<span class="status-tag ${status.cssClass}">${escapeHtml(status.label)}</span>`;
+            const tooltip = status.tooltip ? ` title="${escapeHtml(status.tooltip)}"` : '';
+            return `<span class="status-tag ${status.cssClass}"${tooltip}>${escapeHtml(status.label)}</span>`;
         }
 
         function renderProfilesSection(device) {
