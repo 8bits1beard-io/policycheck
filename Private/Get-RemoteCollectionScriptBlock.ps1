@@ -176,6 +176,7 @@ function Get-RemoteCollectionScriptBlock {
                 if ($rsopWasDisabled) {
                     try {
                         Set-ItemProperty -Path $rsopPath -Name $rsopValueName -Value 0 -ErrorAction Stop
+                        $result.Errors += "RSOP logging restored to disabled state (was temporarily enabled)"
                     }
                     catch {
                         $result.Errors += "Could not restore RSOP logging setting: $_"

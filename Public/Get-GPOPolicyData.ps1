@@ -101,7 +101,7 @@ function Get-GPOPolicyData {
         if ($rsopWasDisabled) {
             try {
                 Set-ItemProperty -Path $rsopPath -Name $rsopValueName -Value 0 -ErrorAction Stop
-                Write-Verbose "RSOP logging restored to disabled state"
+                Write-Warning "RSOP logging restored to disabled state (was temporarily enabled)"
             }
             catch {
                 Write-Warning "Could not restore RSOP logging setting: $_"
@@ -224,5 +224,6 @@ function Get-GPOPolicyData {
         TotalGPOCount    = $computerGpos.Count + $userGpos.Count
         CollectedAt      = Get-Date
         ComputerName     = $env:COMPUTERNAME
+        RSoPWasTemporarilyEnabled = $rsopWasDisabled
     }
 }

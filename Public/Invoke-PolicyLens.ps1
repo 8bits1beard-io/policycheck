@@ -805,6 +805,11 @@ function Invoke-PolicyLens {
         Write-Host "$gpoCount" -ForegroundColor Green -NoNewline
         Write-Host " registry settings found" -ForegroundColor Gray
         Write-PolicyLensLog "Phase 1: GPO collection complete ($($gpoData.TotalGPOCount) GPOs, $gpoCount registry policies)" -Level Info
+
+        # Log if RSoP was temporarily enabled
+        if ($gpoData.RSoPWasTemporarilyEnabled) {
+            Write-PolicyLensLog "Phase 1: RSoP logging was temporarily enabled and has been restored to disabled" -Level Warning
+        }
     }
     catch {
         Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
