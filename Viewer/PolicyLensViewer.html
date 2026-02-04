@@ -2843,6 +2843,7 @@
 
             let catalogHtml = '';
             if (applicableCatalog.length > 0) {
+                const statusHeader = hasVerification ? '<th>Status</th>' : '';
                 catalogHtml = `
                     <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Settings Catalog Policies (${applicableCatalog.length})</h3>
                     <div class="table-wrapper">
@@ -2853,17 +2854,22 @@
                                     <th>Platform</th>
                                     <th>Technologies</th>
                                     <th>Assigned Via</th>
+                                    ${statusHeader}
                                 </tr>
                             </thead>
                             <tbody>
                                 ${applicableCatalog.map(p => {
                                     const assignmentReason = getAssignmentReason(p, deviceGroupIds, groupData);
+                                    const verificationStatus = hasVerification ? getProfileVerificationStatus(p.Id, p.Name, verificationData) : null;
+                                    const statusCell = hasVerification ? `<td>${renderVerificationStatusTag(verificationStatus)}</td>` : '';
+                                    const rowClass = hasVerification ? `status-${verificationStatus.cssClass}` : '';
                                     return `
-                                        <tr>
+                                        <tr class="${rowClass}">
                                             <td><strong>${escapeHtml(p.Name || '')}</strong></td>
                                             <td>${escapeHtml(p.Platforms || '-')}</td>
                                             <td>${escapeHtml(p.Technologies || '-')}</td>
                                             <td>${assignmentReason}</td>
+                                            ${statusCell}
                                         </tr>
                                     `;
                                 }).join('')}
