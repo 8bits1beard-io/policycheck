@@ -59,6 +59,8 @@ function Invoke-PolicyLens {
 
         [switch]$SuggestMappings,
 
+        [switch]$VerifyDeployment,
+
         [string]$OutputPath,
 
         [string]$LogPath = "$env:LOCALAPPDATA\PolicyLens\PolicyLens.log"
@@ -67,6 +69,10 @@ function Invoke-PolicyLens {
     # Validate parameters
     if ($SuggestMappings -and -not $IncludeGraph) {
         Write-Error "-SuggestMappings requires -IncludeGraph to query Settings Catalog via Graph API"
+        return
+    }
+    if ($VerifyDeployment -and -not $IncludeGraph) {
+        Write-Error "-VerifyDeployment requires -IncludeGraph to query deployment status via Graph API"
         return
     }
 
@@ -89,9 +95,11 @@ function Invoke-PolicyLens {
     # Calculate total steps for progress tracking
     $totalSteps = if ($IncludeGraph) { 5 } else { 4 }
     if ($SuggestMappings) { $totalSteps++ }  # Add mapping suggestions step
+    if ($VerifyDeployment) { $totalSteps++ }  # Add deployment verification step
     if ($isRemoteScan) {
         $totalSteps = if ($IncludeGraph) { 4 } else { 3 }
         if ($SuggestMappings) { $totalSteps++ }
+        if ($VerifyDeployment) { $totalSteps++ }
     }
     $currentStep = 0
 
@@ -290,6 +298,7 @@ function Invoke-PolicyLens {
         $graphData = $null
         $appData = $null
         $groupData = $null
+        $deploymentStatus = $null
 
         if ($IncludeGraph) {
             Write-PolicyLensLog "Phase 4: Graph collection started (for remote device)" -Level Info
@@ -391,6 +400,45 @@ function Invoke-PolicyLens {
                         Write-Host "○ " -ForegroundColor Yellow -NoNewline
                         Write-Host "Device not found in Azure AD" -ForegroundColor Yellow
                         Write-PolicyLensLog "Phase 4: Device not found in Azure AD" -Level Warning
+                    }
+
+                    # --- Deployment Verification (Optional) ---
+                    if ($VerifyDeployment -and $groupData.DeviceFound -and $groupData.Device.DeviceId) {
+                        Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+                        Write-Host "► " -ForegroundColor Yellow -NoNewline
+                        Write-Host "Verifying " -ForegroundColor White -NoNewline
+                        Write-Host "deployment status" -ForegroundColor Cyan -NoNewline
+                        Write-Host "...            │" -ForegroundColor White
+                        Write-PolicyLensLog "Deployment Verification: Started (remote device)" -Level Info
+                        try {
+                            $deploymentStatus = Get-DeviceDeploymentStatus -AzureADDeviceId $groupData.Device.DeviceId -GraphConnected
+                            if ($deploymentStatus.DeviceFound) {
+                                $profileCount = @($deploymentStatus.ProfileStates).Count
+                                $complianceCount = @($deploymentStatus.ComplianceStates).Count
+                                $appliedCount = @($deploymentStatus.ProfileStates | Where-Object { $_.State -eq 'applied' }).Count
+                                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                                Write-Host "✓ " -ForegroundColor Green -NoNewline
+                                Write-Host "$profileCount" -ForegroundColor Green -NoNewline
+                                Write-Host " profiles (" -ForegroundColor Gray -NoNewline
+                                Write-Host "$appliedCount" -ForegroundColor Cyan -NoNewline
+                                Write-Host " applied), " -ForegroundColor Gray -NoNewline
+                                Write-Host "$complianceCount" -ForegroundColor Green -NoNewline
+                                Write-Host " compliance policies" -ForegroundColor Gray
+                                Write-PolicyLensLog "Deployment Verification: Complete ($profileCount profiles, $complianceCount compliance)" -Level Info
+                            }
+                            else {
+                                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                                Write-Host "○ " -ForegroundColor Yellow -NoNewline
+                                Write-Host "Device not found in Intune" -ForegroundColor Yellow
+                                Write-PolicyLensLog "Deployment Verification: Device not in Intune" -Level Warning
+                            }
+                        }
+                        catch {
+                            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                            Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
+                            Write-Host "Could not verify deployment status" -ForegroundColor Yellow
+                            Write-PolicyLensLog "Deployment Verification: Failed - $_" -Level Warning
+                        }
                     }
 
                     Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
@@ -527,6 +575,7 @@ function Invoke-PolicyLens {
             GroupData = $groupData
             Analysis  = $analysis
             MappingSuggestions = $mappingSuggestions
+            DeploymentStatus = $deploymentStatus
         }
 
         # Export to JSON with device metadata from remote
@@ -703,6 +752,7 @@ function Invoke-PolicyLens {
     $graphData = $null
     $appData = $null
     $groupData = $null
+    $deploymentStatus = $null
 
     if ($IncludeGraph) {
         Write-PolicyLensLog "Phase 4: Graph collection started" -Level Info
@@ -804,6 +854,45 @@ function Invoke-PolicyLens {
                     Write-Host "○ " -ForegroundColor Yellow -NoNewline
                     Write-Host "Device not found in Azure AD" -ForegroundColor Yellow
                     Write-PolicyLensLog "Phase 4: Device not found in Azure AD" -Level Warning
+                }
+
+                # --- Deployment Verification (Optional) ---
+                if ($VerifyDeployment -and $groupData.DeviceFound -and $groupData.Device.DeviceId) {
+                    Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "► " -ForegroundColor Yellow -NoNewline
+                    Write-Host "Verifying " -ForegroundColor White -NoNewline
+                    Write-Host "deployment status" -ForegroundColor Cyan -NoNewline
+                    Write-Host "...            │" -ForegroundColor White
+                    Write-PolicyLensLog "Deployment Verification: Started" -Level Info
+                    try {
+                        $deploymentStatus = Get-DeviceDeploymentStatus -AzureADDeviceId $groupData.Device.DeviceId -GraphConnected
+                        if ($deploymentStatus.DeviceFound) {
+                            $profileCount = @($deploymentStatus.ProfileStates).Count
+                            $complianceCount = @($deploymentStatus.ComplianceStates).Count
+                            $appliedCount = @($deploymentStatus.ProfileStates | Where-Object { $_.State -eq 'applied' }).Count
+                            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                            Write-Host "✓ " -ForegroundColor Green -NoNewline
+                            Write-Host "$profileCount" -ForegroundColor Green -NoNewline
+                            Write-Host " profiles (" -ForegroundColor Gray -NoNewline
+                            Write-Host "$appliedCount" -ForegroundColor Cyan -NoNewline
+                            Write-Host " applied), " -ForegroundColor Gray -NoNewline
+                            Write-Host "$complianceCount" -ForegroundColor Green -NoNewline
+                            Write-Host " compliance policies" -ForegroundColor Gray
+                            Write-PolicyLensLog "Deployment Verification: Complete ($profileCount profiles, $complianceCount compliance)" -Level Info
+                        }
+                        else {
+                            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                            Write-Host "○ " -ForegroundColor Yellow -NoNewline
+                            Write-Host "Device not found in Intune" -ForegroundColor Yellow
+                            Write-PolicyLensLog "Deployment Verification: Device not in Intune" -Level Warning
+                        }
+                    }
+                    catch {
+                        Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                        Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
+                        Write-Host "Could not verify deployment status" -ForegroundColor Yellow
+                        Write-PolicyLensLog "Deployment Verification: Failed - $_" -Level Warning
+                    }
                 }
 
             }
@@ -958,6 +1047,7 @@ function Invoke-PolicyLens {
         GroupData = $groupData
         Analysis  = $analysis
         MappingSuggestions = $mappingSuggestions
+        DeploymentStatus = $deploymentStatus
     }
 
     # Export to JSON

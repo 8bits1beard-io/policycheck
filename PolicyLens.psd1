@@ -13,6 +13,7 @@
         'Get-DeviceAppAssignments'
         'Get-DeviceGroupMemberships'
         'Get-SettingsCatalogMappings'
+        'Get-DeviceDeploymentStatus'
         'Compare-PolicyOverlap'
         'Get-SCCMPolicyData'
     )

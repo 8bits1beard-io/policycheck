@@ -134,10 +134,22 @@ function Get-DeviceAppAssignments {
                 foreach ($appFolder in $appFolders) {
                     $props = Get-ItemProperty $appFolder.PSPath -ErrorAction SilentlyContinue
                     if ($props) {
+                        # Determine installation state from Result code
+                        # Common Result codes: 0 = Pending/InProgress, 1 = Success, others = Failed
+                        $installState = switch ($props.Result) {
+                            1       { 'Installed' }
+                            0       { 'Pending' }
+                            $null   { 'Unknown' }
+                            default { 'Failed' }
+                        }
+
                         $localApps += [PSCustomObject]@{
-                            AppId   = $appFolder.PSChildName
-                            UserId  = $userFolder.PSChildName
-                            Result  = $props.Result
+                            AppId        = $appFolder.PSChildName
+                            UserId       = $userFolder.PSChildName
+                            Result       = $props.Result
+                            ResultCode   = $props.ResultCode
+                            ErrorCode    = $props.ErrorCode
+                            InstallState = $installState
                         }
                     }
                 }

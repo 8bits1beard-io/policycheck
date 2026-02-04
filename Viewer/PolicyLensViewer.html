@@ -475,6 +475,61 @@
             color: var(--accent-blue);
         }
 
+        /* Deployment Verification Status Tags */
+        .status-tag.applied {
+            background: rgba(107, 201, 107, 0.2);
+            color: var(--accent-green);
+        }
+
+        .status-tag.pending {
+            background: rgba(86, 182, 194, 0.2);
+            color: var(--accent-cyan);
+        }
+
+        .status-tag.not-applied {
+            background: rgba(224, 108, 117, 0.2);
+            color: var(--accent-red);
+        }
+
+        .status-tag.error {
+            background: rgba(224, 108, 117, 0.3);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .status-tag.installed {
+            background: rgba(107, 201, 107, 0.2);
+            color: var(--accent-green);
+        }
+
+        .status-tag.not-installed {
+            background: rgba(160, 160, 184, 0.2);
+            color: var(--text-secondary);
+        }
+
+        .status-tag.unknown {
+            background: rgba(160, 160, 184, 0.2);
+            color: var(--text-secondary);
+        }
+
+        /* Verification row status classes */
+        tr.status-applied td {
+            border-left: 3px solid var(--accent-green);
+        }
+
+        tr.status-pending td {
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        tr.status-not-applied td {
+            border-left: 3px solid var(--accent-red);
+        }
+
+        tr.status-error td {
+            border-left: 3px solid var(--accent-red);
+            background: rgba(224, 108, 117, 0.08);
+        }
+
         /* Info boxes */
         .info-box {
             padding: 12px 16px;
@@ -2082,6 +2137,8 @@
             const deviceGroupIds = getDeviceGroupIds(groupData);
             const allApps = appData.AssignedApps || [];
             const totalAppsInTenant = appData.Apps?.length || 0;
+            const localApps = appData.LocalApps || [];
+            const hasLocalApps = localApps.length > 0;
 
             // Filter apps to only those assigned to this device
             const applicableApps = allApps.filter(app => appAppliesToDevice(app, deviceGroupIds));
@@ -2148,6 +2205,7 @@
             // Helper to render app table
             const renderAppTable = (apps, title, titleColor) => {
                 if (apps.length === 0) return '';
+                const statusHeader = hasLocalApps ? '<th>Install Status</th>' : '';
                 return `
                     <h3 style="margin: 15px 0 10px; color: ${titleColor};">${title} (${apps.length})</h3>
                     <div class="table-wrapper">
@@ -2158,17 +2216,22 @@
                                     <th>Type</th>
                                     <th>Publisher</th>
                                     <th>Assigned Via</th>
+                                    ${statusHeader}
                                 </tr>
                             </thead>
                             <tbody>
                                 ${apps.map(app => {
                                     const assignmentReason = getAppAssignmentReason(app, deviceGroupIds, groupData);
+                                    const installStatus = hasLocalApps ? getAppInstallationStatus(app.Id, localApps) : null;
+                                    const statusCell = hasLocalApps ? `<td>${renderVerificationStatusTag(installStatus)}</td>` : '';
+                                    const rowClass = hasLocalApps && installStatus ? `status-${installStatus.cssClass}` : '';
                                     return `
-                                        <tr>
+                                        <tr class="${rowClass}">
                                             <td><strong>${escapeHtml(app.DisplayName || 'Unknown App')}</strong></td>
                                             <td style="font-size: 0.85rem;">${escapeHtml(app.AppType || '-')}</td>
                                             <td style="font-size: 0.85rem;">${escapeHtml(app.Publisher || '-')}</td>
                                             <td>${assignmentReason}</td>
+                                            ${statusCell}
                                         </tr>
                                     `;
                                 }).join('')}
@@ -2342,6 +2405,98 @@
             `;
         }
 
+        // --- Deployment Verification Helper Functions ---
+
+        function getProfileVerificationStatus(profileId, profileName, verificationData) {
+            // If no verification data, return unknown
+            if (!verificationData?.enabled || !verificationData?.profileStates) {
+                return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
+            }
+
+            // Try to match by profile ID or name
+            const state = verificationData.profileStates.find(s =>
+                s.ProfileId === profileId ||
+                (s.ProfileName && profileName && s.ProfileName.toLowerCase() === profileName.toLowerCase())
+            );
+
+            if (!state) {
+                return { state: 'not-applied', label: 'Not Applied', cssClass: 'not-applied' };
+            }
+
+            const stateMap = {
+                'applied': { state: 'applied', label: 'Applied', cssClass: 'applied' },
+                'pending': { state: 'pending', label: 'Pending', cssClass: 'pending' },
+                'error': { state: 'error', label: 'Error', cssClass: 'error' },
+                'notApplicable': { state: 'notApplicable', label: 'N/A', cssClass: 'unknown' },
+                'unknown': { state: 'unknown', label: 'Unknown', cssClass: 'unknown' }
+            };
+
+            return stateMap[state.State] || { state: state.State, label: state.State, cssClass: 'unknown' };
+        }
+
+        function getComplianceVerificationStatus(policyId, policyName, verificationData) {
+            // If no verification data, return unknown
+            if (!verificationData?.enabled || !verificationData?.complianceStates) {
+                return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
+            }
+
+            // Try to match by policy ID or name
+            const state = verificationData.complianceStates.find(s =>
+                s.PolicyId === policyId ||
+                (s.PolicyName && policyName && s.PolicyName.toLowerCase() === policyName.toLowerCase())
+            );
+
+            if (!state) {
+                return { state: 'not-applied', label: 'Not Applied', cssClass: 'not-applied' };
+            }
+
+            const stateMap = {
+                'applied': { state: 'applied', label: 'Applied', cssClass: 'applied' },
+                'pending': { state: 'pending', label: 'Pending', cssClass: 'pending' },
+                'error': { state: 'error', label: 'Error', cssClass: 'error' },
+                'notApplicable': { state: 'notApplicable', label: 'N/A', cssClass: 'unknown' },
+                'unknown': { state: 'unknown', label: 'Unknown', cssClass: 'unknown' }
+            };
+
+            return stateMap[state.State] || { state: state.State, label: state.State, cssClass: 'unknown' };
+        }
+
+        function getAppInstallationStatus(appId, localApps) {
+            // Check LocalApps array for matching app
+            if (!localApps || localApps.length === 0) {
+                return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
+            }
+
+            const localApp = localApps.find(la => la.AppId === appId);
+            if (!localApp) {
+                return { state: 'not-installed', label: 'Not Installed', cssClass: 'not-installed' };
+            }
+
+            // Use the InstallState property if available, otherwise derive from Result
+            if (localApp.InstallState) {
+                const stateMap = {
+                    'Installed': { state: 'installed', label: 'Installed', cssClass: 'installed' },
+                    'Pending': { state: 'pending', label: 'Pending', cssClass: 'pending' },
+                    'Failed': { state: 'failed', label: 'Failed', cssClass: 'error' },
+                    'Unknown': { state: 'unknown', label: 'Unknown', cssClass: 'unknown' }
+                };
+                return stateMap[localApp.InstallState] || { state: 'unknown', label: localApp.InstallState, cssClass: 'unknown' };
+            }
+
+            // Fallback to Result code interpretation
+            if (localApp.Result === 1) {
+                return { state: 'installed', label: 'Installed', cssClass: 'installed' };
+            } else if (localApp.Result === 0) {
+                return { state: 'pending', label: 'Pending', cssClass: 'pending' };
+            } else {
+                return { state: 'failed', label: 'Failed', cssClass: 'error' };
+            }
+        }
+
+        function renderVerificationStatusTag(status) {
+            return `<span class="status-tag ${status.cssClass}">${escapeHtml(status.label)}</span>`;
+        }
+
         function renderProfilesSection(device) {
             const graphData = device.graphData;
             if (!graphData?.Available) {
@@ -2350,6 +2505,8 @@
 
             const groupData = device.groupData;
             const deviceGroupIds = getDeviceGroupIds(groupData);
+            const verificationData = device.verificationData;
+            const hasVerification = verificationData?.enabled;
 
             const profiles = graphData.Profiles || [];
             const compliance = graphData.CompliancePolicies || [];
@@ -2371,6 +2528,7 @@
 
             let profilesHtml = '';
             if (applicableProfiles.length > 0) {
+                const statusHeader = hasVerification ? '<th>Status</th>' : '';
                 profilesHtml = `
                     <h3 style="margin: 15px 0 10px; color: var(--text-secondary);">Device Configuration Profiles (${applicableProfiles.length})</h3>
                     <div class="table-wrapper">
@@ -2380,6 +2538,7 @@
                                     <th>Name</th>
                                     <th>Type</th>
                                     <th>Assigned Via</th>
+                                    ${statusHeader}
                                     <th>Last Modified</th>
                                 </tr>
                             </thead>
@@ -2387,11 +2546,15 @@
                                 ${applicableProfiles.map(p => {
                                     const profileType = (p.OdataType || '').replace('#microsoft.graph.', '').replace(/([A-Z])/g, ' $1').trim();
                                     const assignmentReason = getAssignmentReason(p, deviceGroupIds, groupData);
+                                    const verificationStatus = hasVerification ? getProfileVerificationStatus(p.Id, p.DisplayName, verificationData) : null;
+                                    const statusCell = hasVerification ? `<td>${renderVerificationStatusTag(verificationStatus)}</td>` : '';
+                                    const rowClass = hasVerification ? `status-${verificationStatus.cssClass}` : '';
                                     return `
-                                        <tr>
+                                        <tr class="${rowClass}">
                                             <td><strong>${escapeHtml(p.DisplayName || '')}</strong></td>
                                             <td style="font-size: 0.85rem;">${escapeHtml(profileType)}</td>
                                             <td>${assignmentReason}</td>
+                                            ${statusCell}
                                             <td>${p.LastModified ? new Date(p.LastModified).toLocaleDateString() : '-'}</td>
                                         </tr>
                                     `;
@@ -2404,6 +2567,7 @@
 
             let complianceHtml = '';
             if (applicableCompliance.length > 0) {
+                const statusHeader = hasVerification ? '<th>Status</th>' : '';
                 complianceHtml = `
                     <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Compliance Policies (${applicableCompliance.length})</h3>
                     <div class="table-wrapper">
@@ -2413,17 +2577,22 @@
                                     <th>Name</th>
                                     <th>Type</th>
                                     <th>Assigned Via</th>
+                                    ${statusHeader}
                                 </tr>
                             </thead>
                             <tbody>
                                 ${applicableCompliance.map(p => {
                                     const policyType = (p.OdataType || '').replace('#microsoft.graph.', '').replace(/([A-Z])/g, ' $1').trim();
                                     const assignmentReason = getAssignmentReason(p, deviceGroupIds, groupData);
+                                    const verificationStatus = hasVerification ? getComplianceVerificationStatus(p.Id, p.DisplayName, verificationData) : null;
+                                    const statusCell = hasVerification ? `<td>${renderVerificationStatusTag(verificationStatus)}</td>` : '';
+                                    const rowClass = hasVerification ? `status-${verificationStatus.cssClass}` : '';
                                     return `
-                                        <tr>
+                                        <tr class="${rowClass}">
                                             <td><strong>${escapeHtml(p.DisplayName || '')}</strong></td>
                                             <td style="font-size: 0.85rem;">${escapeHtml(policyType)}</td>
                                             <td>${assignmentReason}</td>
+                                            ${statusCell}
                                         </tr>
                                     `;
                                 }).join('')}

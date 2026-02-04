@@ -109,7 +109,7 @@ function ConvertTo-JsonExport {
 
         # Build the complete export object
         $exportObject = [ordered]@{
-            schemaVersion = "1.0"
+            schemaVersion = "1.1"
             exportedAt    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             exportedBy    = "PolicyLens v1.2.0"
             device        = $deviceInfo
@@ -121,6 +121,16 @@ function ConvertTo-JsonExport {
             groupData     = if ($Result.PSObject.Properties['GroupData']) { $Result.GroupData } else { $null }
             analysis      = if ($Result.PSObject.Properties['Analysis']) { $Result.Analysis } else { $null }
             mappingSuggestions = if ($Result.PSObject.Properties['MappingSuggestions']) { $Result.MappingSuggestions } else { $null }
+            verificationData = if ($Result.PSObject.Properties['DeploymentStatus'] -and $Result.DeploymentStatus) {
+                [ordered]@{
+                    enabled         = $true
+                    collectedAt     = $Result.DeploymentStatus.CollectedAt
+                    deviceFound     = $Result.DeploymentStatus.DeviceFound
+                    intuneDeviceId  = $Result.DeploymentStatus.IntuneDeviceId
+                    profileStates   = $Result.DeploymentStatus.ProfileStates
+                    complianceStates = $Result.DeploymentStatus.ComplianceStates
+                }
+            } else { $null }
         }
 
         Write-Verbose "Converting to JSON with depth 15..."
