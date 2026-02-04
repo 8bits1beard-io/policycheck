@@ -23,6 +23,8 @@
     Azure AD tenant ID or domain for Graph authentication (e.g., "contoso.onmicrosoft.com").
 .PARAMETER SuggestMappings
     Find Intune Settings Catalog matches for unmapped GPO settings.
+.PARAMETER SkipSCCM
+    Skip SCCM/ConfigMgr client data collection via WMI.
 .PARAMETER SkipMDMDiag
     Skip running mdmdiagnosticstool (can be slow on some devices).
 .PARAMETER OutputPath
@@ -56,6 +58,7 @@ param(
     [switch]$SkipVerify,
     [switch]$SuggestMappings,
     [string]$TenantId,
+    [switch]$SkipSCCM,
     [switch]$SkipMDMDiag,
     [string]$OutputPath,
     [string]$LogPath
@@ -75,6 +78,7 @@ if ($SkipIntune) { $params['SkipIntune'] = $true }
 if ($SkipVerify) { $params['SkipVerify'] = $true }
 if ($SuggestMappings) { $params['SuggestMappings'] = $true }
 if ($TenantId) { $params['TenantId'] = $TenantId }
+if ($SkipSCCM) { $params['SkipSCCM'] = $true }
 if ($SkipMDMDiag) { $params['SkipMDMDiag'] = $true }
 if ($OutputPath) { $params['OutputPath'] = $OutputPath }
 if ($LogPath) { $params['LogPath'] = $LogPath }

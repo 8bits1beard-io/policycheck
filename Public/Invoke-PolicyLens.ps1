@@ -23,6 +23,8 @@ function Invoke-PolicyLens {
         applied to the device. Verification is enabled by default.
     .PARAMETER TenantId
         Azure AD tenant ID for Graph authentication.
+    .PARAMETER SkipSCCM
+        Skip SCCM/ConfigMgr client data collection via WMI.
     .PARAMETER SkipMDMDiag
         Skip running mdmdiagnosticstool (can be slow on some devices).
     .PARAMETER SuggestMappings
@@ -64,6 +66,8 @@ function Invoke-PolicyLens {
 
         [string]$TenantId,
 
+        [switch]$SkipSCCM,
+
         [switch]$SkipMDMDiag,
 
         [switch]$SuggestMappings,
@@ -100,11 +104,14 @@ function Invoke-PolicyLens {
     $session = $null
 
     # Calculate total steps for progress tracking
+    # Base: GPO, MDM, SCCM, Analysis = 4 steps (+ Graph if enabled)
     $totalSteps = if ($IncludeGraph) { 5 } else { 4 }
+    if ($SkipSCCM) { $totalSteps-- }  # Remove SCCM step
     if ($SuggestMappings) { $totalSteps++ }  # Add mapping suggestions step
     if ($VerifyDeployment) { $totalSteps++ }  # Add deployment verification step
     if ($isRemoteScan) {
         $totalSteps = if ($IncludeGraph) { 4 } else { 3 }
+        if ($SkipSCCM) { $totalSteps-- }
         if ($SuggestMappings) { $totalSteps++ }
         if ($VerifyDeployment) { $totalSteps++ }
     }
@@ -113,7 +120,7 @@ function Invoke-PolicyLens {
     # --- Start logging ---
     Write-PolicyLensLog "========================================" -Level Info
     Write-PolicyLensLog "PolicyLens started (v1.2.0)" -Level Info
-    $logParams = "SkipIntune=$SkipIntune, SkipVerify=$SkipVerify, SkipMDMDiag=$SkipMDMDiag"
+    $logParams = "SkipIntune=$SkipIntune, SkipVerify=$SkipVerify, SkipSCCM=$SkipSCCM, SkipMDMDiag=$SkipMDMDiag"
     if ($isRemoteScan) { $logParams += ", ComputerName=$ComputerName" }
     Write-PolicyLensLog "Parameters: $logParams" -Level Info
 
@@ -717,42 +724,54 @@ function Invoke-PolicyLens {
     }
 
     # --- Phase 3: Collect SCCM data ---
-    $currentStep++
-    Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
-    Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
-    Write-Host "SCCM / CONFIGMGR" -ForegroundColor DarkYellow -NoNewline
-    Write-Host " ───────────────┤" -ForegroundColor DarkGray
-    Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
-    Write-Host "► " -ForegroundColor Yellow -NoNewline
-    Write-Host "Querying SCCM client via WMI..." -ForegroundColor White
-    Write-PolicyLensLog "Phase 3: SCCM collection started" -Level Info
     $sccmData = $null
-    try {
-        $sccmData = Get-SCCMPolicyData
-        if ($sccmData.IsInstalled) {
-            $appCount = $sccmData.Applications.Count
-            $baselineCount = $sccmData.Baselines.Count
-            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-            Write-Host "✓ " -ForegroundColor Green -NoNewline
-            Write-Host "Client installed • " -ForegroundColor Green -NoNewline
-            Write-Host "$appCount" -ForegroundColor Green -NoNewline
-            Write-Host " apps, " -ForegroundColor Gray -NoNewline
-            Write-Host "$baselineCount" -ForegroundColor Green -NoNewline
-            Write-Host " baselines retrieved" -ForegroundColor Gray
-            Write-PolicyLensLog "Phase 3: SCCM collection complete ($appCount apps, $baselineCount baselines)" -Level Info
+    if (-not $SkipSCCM) {
+        $currentStep++
+        Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
+        Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+        Write-Host "SCCM / CONFIGMGR" -ForegroundColor DarkYellow -NoNewline
+        Write-Host " ───────────────┤" -ForegroundColor DarkGray
+        Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "► " -ForegroundColor Yellow -NoNewline
+        Write-Host "Querying SCCM client via WMI..." -ForegroundColor White
+        Write-PolicyLensLog "Phase 3: SCCM collection started" -Level Info
+        try {
+            $sccmData = Get-SCCMPolicyData
+            if ($sccmData.IsInstalled) {
+                $appCount = $sccmData.Applications.Count
+                $baselineCount = $sccmData.Baselines.Count
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "✓ " -ForegroundColor Green -NoNewline
+                Write-Host "Client installed • " -ForegroundColor Green -NoNewline
+                Write-Host "$appCount" -ForegroundColor Green -NoNewline
+                Write-Host " apps, " -ForegroundColor Gray -NoNewline
+                Write-Host "$baselineCount" -ForegroundColor Green -NoNewline
+                Write-Host " baselines retrieved" -ForegroundColor Gray
+                Write-PolicyLensLog "Phase 3: SCCM collection complete ($appCount apps, $baselineCount baselines)" -Level Info
+            }
+            else {
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "○ " -ForegroundColor DarkGray -NoNewline
+                Write-Host "SCCM client not installed" -ForegroundColor DarkGray
+                Write-PolicyLensLog "Phase 3: SCCM client not installed" -Level Info
+            }
         }
-        else {
+        catch {
             Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-            Write-Host "○ " -ForegroundColor DarkGray -NoNewline
-            Write-Host "SCCM client not installed" -ForegroundColor DarkGray
-            Write-PolicyLensLog "Phase 3: SCCM client not installed" -Level Info
+            Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
+            Write-Host "Could not collect SCCM data" -ForegroundColor Yellow
+            Write-PolicyLensLog "Phase 3: SCCM collection failed - $_" -Level Warning
         }
     }
-    catch {
+    else {
+        Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
+        Write-Host " [Step -/$totalSteps] " -ForegroundColor DarkGray -NoNewline
+        Write-Host "SCCM / CONFIGMGR" -ForegroundColor DarkGray -NoNewline
+        Write-Host " ───────────────┤" -ForegroundColor DarkGray
         Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
-        Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
-        Write-Host "Could not collect SCCM data" -ForegroundColor Yellow
-        Write-PolicyLensLog "Phase 3: SCCM collection failed - $_" -Level Warning
+        Write-Host "○ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "Skipped (use without -SkipSCCM to enable)" -ForegroundColor DarkGray
+        Write-PolicyLensLog "Phase 3: Skipped (SkipSCCM specified)" -Level Info
     }
 
     # --- Phase 4: Optionally collect Graph data ---
