@@ -21,6 +21,9 @@ function Invoke-PolicyLens {
     .PARAMETER SkipVerify
         Skip deployment verification that checks whether assigned policies are actually
         applied to the device. Verification is enabled by default.
+    .PARAMETER SkipGPOVerify
+        Skip GPO application verification that checks whether linked GPOs are actually
+        applied to the device. Requires Active Directory access.
     .PARAMETER TenantId
         Azure AD tenant ID for Graph authentication.
     .PARAMETER SkipSCCM
@@ -64,6 +67,8 @@ function Invoke-PolicyLens {
 
         [switch]$SkipVerify,
 
+        [switch]$SkipGPOVerify,
+
         [string]$TenantId,
 
         [switch]$SkipSCCM,
@@ -80,6 +85,7 @@ function Invoke-PolicyLens {
     # Derive internal flags from skip parameters
     $IncludeGraph = -not $SkipIntune
     $VerifyDeployment = -not $SkipVerify -and -not $SkipIntune  # Verification requires Graph
+    $VerifyGPO = -not $SkipGPOVerify
 
     # Validate parameters
     if ($SuggestMappings -and $SkipIntune) {
@@ -109,18 +115,20 @@ function Invoke-PolicyLens {
     if ($SkipSCCM) { $totalSteps-- }  # Remove SCCM step
     if ($SuggestMappings) { $totalSteps++ }  # Add mapping suggestions step
     if ($VerifyDeployment) { $totalSteps++ }  # Add deployment verification step
+    if ($VerifyGPO) { $totalSteps++ }  # Add GPO verification step
     if ($isRemoteScan) {
         $totalSteps = if ($IncludeGraph) { 4 } else { 3 }
         if ($SkipSCCM) { $totalSteps-- }
         if ($SuggestMappings) { $totalSteps++ }
         if ($VerifyDeployment) { $totalSteps++ }
+        if ($VerifyGPO) { $totalSteps++ }
     }
     $currentStep = 0
 
     # --- Start logging ---
     Write-PolicyLensLog "========================================" -Level Info
     Write-PolicyLensLog "PolicyLens started (v1.2.0)" -Level Info
-    $logParams = "SkipIntune=$SkipIntune, SkipVerify=$SkipVerify, SkipSCCM=$SkipSCCM, SkipMDMDiag=$SkipMDMDiag"
+    $logParams = "SkipIntune=$SkipIntune, SkipVerify=$SkipVerify, SkipGPOVerify=$SkipGPOVerify, SkipSCCM=$SkipSCCM, SkipMDMDiag=$SkipMDMDiag"
     if ($isRemoteScan) { $logParams += ", ComputerName=$ComputerName" }
     Write-PolicyLensLog "Parameters: $logParams" -Level Info
 
@@ -485,6 +493,51 @@ function Invoke-PolicyLens {
             Write-PolicyLensLog "Phase 4: Skipped (IncludeGraph not specified)" -Level Info
         }
 
+        # --- GPO Verification (Remote Scan) ---
+        # Note: This runs on the target machine via the remote session, which has AD access
+        $gpoVerification = $null
+        if ($VerifyGPO -and $gpoData.TotalGPOCount -gt 0) {
+            Write-Host ""
+            Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
+            Write-Host " GPO VERIFY " -ForegroundColor Blue -NoNewline
+            Write-Host "───────────────────────────────┐" -ForegroundColor DarkGray
+            Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+            Write-Host "► " -ForegroundColor Yellow -NoNewline
+            Write-Host "Verifying GPO application status via AD..." -ForegroundColor White
+            Write-PolicyLensLog "GPO Verification: Started (remote)" -Level Info
+            try {
+                $allAppliedGPOs = @($gpoData.ComputerGPOs) + @($gpoData.UserGPOs)
+                $gpoVerification = Get-GPOVerificationStatus -AppliedGPOs $allAppliedGPOs -ComputerName $deviceMetadata.ComputerName
+                if ($gpoVerification.Available) {
+                    $appliedCount = $gpoVerification.AppliedCount
+                    $deniedCount = $gpoVerification.DeniedCount
+                    $disabledCount = $gpoVerification.DisabledCount
+                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "✓ " -ForegroundColor Green -NoNewline
+                    Write-Host "$appliedCount" -ForegroundColor Green -NoNewline
+                    Write-Host " applied, " -ForegroundColor Gray -NoNewline
+                    Write-Host "$deniedCount" -ForegroundColor Yellow -NoNewline
+                    Write-Host " filtered, " -ForegroundColor Gray -NoNewline
+                    Write-Host "$disabledCount" -ForegroundColor Cyan -NoNewline
+                    Write-Host " disabled" -ForegroundColor Gray
+                    Write-PolicyLensLog "GPO Verification: Complete ($appliedCount applied, $deniedCount filtered, $disabledCount disabled)" -Level Info
+                }
+                elseif ($gpoVerification.Message) {
+                    Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                    Write-Host "○ " -ForegroundColor Yellow -NoNewline
+                    Write-Host "$($gpoVerification.Message)" -ForegroundColor Yellow
+                    Write-PolicyLensLog "GPO Verification: $($gpoVerification.Message)" -Level Warning
+                }
+            }
+            catch {
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
+                Write-Host "Could not verify GPO status" -ForegroundColor Yellow
+                Write-PolicyLensLog "GPO Verification: Failed - $_" -Level Warning
+            }
+            Write-Host "  └────────────────────────────────────────────┘" -ForegroundColor DarkGray
+        }
+
         # --- Analysis ---
         Write-Host ""
         Write-Host "  ┌─" -ForegroundColor DarkGray -NoNewline
@@ -590,6 +643,7 @@ function Invoke-PolicyLens {
             Analysis  = $analysis
             MappingSuggestions = $mappingSuggestions
             DeploymentStatus = $deploymentStatus
+            GPOVerification = $gpoVerification
         }
 
         # Export to JSON with device metadata from remote
@@ -684,6 +738,66 @@ function Invoke-PolicyLens {
         Write-Host "Collection failed" -ForegroundColor Red
         Write-PolicyLensLog "Phase 1: GPO collection failed - $_" -Level Error
         throw
+    }
+
+    # --- GPO Verification (after GPO collection) ---
+    $gpoVerification = $null
+    if ($VerifyGPO -and $gpoData.TotalGPOCount -gt 0) {
+        $currentStep++
+        Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
+        Write-Host " [Step $currentStep/$totalSteps] " -ForegroundColor White -NoNewline
+        Write-Host "GPO VERIFICATION" -ForegroundColor Blue -NoNewline
+        Write-Host " ──────────────────┤" -ForegroundColor DarkGray
+        Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "► " -ForegroundColor Yellow -NoNewline
+        Write-Host "Verifying GPO application status via Active Directory..." -ForegroundColor White
+        Write-PolicyLensLog "GPO Verification: Started" -Level Info
+        try {
+            $allAppliedGPOs = @($gpoData.ComputerGPOs) + @($gpoData.UserGPOs)
+            $gpoVerification = Get-GPOVerificationStatus -AppliedGPOs $allAppliedGPOs
+            if ($gpoVerification.Available) {
+                $appliedCount = $gpoVerification.AppliedCount
+                $deniedCount = $gpoVerification.DeniedCount
+                $disabledCount = $gpoVerification.DisabledCount
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "✓ " -ForegroundColor Green -NoNewline
+                Write-Host "$appliedCount" -ForegroundColor Green -NoNewline
+                Write-Host " applied, " -ForegroundColor Gray -NoNewline
+                Write-Host "$deniedCount" -ForegroundColor Yellow -NoNewline
+                Write-Host " filtered, " -ForegroundColor Gray -NoNewline
+                Write-Host "$disabledCount" -ForegroundColor Cyan -NoNewline
+                Write-Host " disabled" -ForegroundColor Gray
+                Write-PolicyLensLog "GPO Verification: Complete ($appliedCount applied, $deniedCount filtered, $disabledCount disabled)" -Level Info
+            }
+            elseif ($gpoVerification.Message) {
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "○ " -ForegroundColor Yellow -NoNewline
+                Write-Host "$($gpoVerification.Message)" -ForegroundColor Yellow
+                Write-PolicyLensLog "GPO Verification: $($gpoVerification.Message)" -Level Warning
+            }
+            else {
+                Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+                Write-Host "○ " -ForegroundColor Yellow -NoNewline
+                Write-Host "GPO verification not available" -ForegroundColor Yellow
+                Write-PolicyLensLog "GPO Verification: Not available" -Level Warning
+            }
+        }
+        catch {
+            Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+            Write-Host "⚠ " -ForegroundColor Yellow -NoNewline
+            Write-Host "Could not verify GPO status: $_" -ForegroundColor Yellow
+            Write-PolicyLensLog "GPO Verification: Failed - $_" -Level Warning
+        }
+    }
+    elseif (-not $VerifyGPO) {
+        Write-Host "  ├─" -ForegroundColor DarkGray -NoNewline
+        Write-Host " [Step -/$totalSteps] " -ForegroundColor DarkGray -NoNewline
+        Write-Host "GPO VERIFICATION" -ForegroundColor DarkGray -NoNewline
+        Write-Host " ──────────────────┤" -ForegroundColor DarkGray
+        Write-Host "  │   " -ForegroundColor DarkGray -NoNewline
+        Write-Host "○ " -ForegroundColor DarkGray -NoNewline
+        Write-Host "Skipped (use without -SkipGPOVerify to enable)" -ForegroundColor DarkGray
+        Write-PolicyLensLog "GPO Verification: Skipped (SkipGPOVerify specified)" -Level Info
     }
 
     # --- Phase 2: Collect MDM data ---
@@ -1074,6 +1188,7 @@ function Invoke-PolicyLens {
         Analysis  = $analysis
         MappingSuggestions = $mappingSuggestions
         DeploymentStatus = $deploymentStatus
+        GPOVerification = $gpoVerification
     }
 
     # Export to JSON

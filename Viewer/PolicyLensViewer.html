@@ -1635,8 +1635,72 @@
         function renderGPOSection(device) {
             const settings = device.gpoData?.RegistryPolicies || [];
             const gpoCount = device.gpoData?.TotalGPOCount || 0;
+            const gpoVerification = device.gpoVerificationData;
+            const hasVerification = gpoVerification?.enabled;
 
-            if (settings.length === 0) {
+            // Build verification status summary
+            let verificationSummary = '';
+            if (hasVerification) {
+                const applied = gpoVerification.appliedCount || 0;
+                const denied = gpoVerification.deniedCount || 0;
+                const disabled = gpoVerification.disabledCount || 0;
+                verificationSummary = ` (${applied} Applied, ${denied} Filtered, ${disabled} Disabled)`;
+            }
+
+            // Build GPO verification table if data available
+            let verificationTableHtml = '';
+            if (hasVerification && gpoVerification.verificationStates?.length > 0) {
+                const states = gpoVerification.verificationStates;
+                verificationTableHtml = `
+                    <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">GPO Application Status (${states.length} Linked GPOs)</h3>
+                    <div class="info-box info" style="margin-bottom: 10px;">
+                        Shows GPOs linked to this device's OU hierarchy in Active Directory and whether they applied successfully.
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="gpo-verification-table">
+                            <thead>
+                                <tr>
+                                    <th>GPO Name</th>
+                                    <th>Link Location</th>
+                                    <th>Scope</th>
+                                    <th>Enforced</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${states.map(s => {
+                                    const status = getGPOVerificationStatus(s.GPOGuid, s.GPOName, gpoVerification);
+                                    const rowClass = 'status-' + status.cssClass;
+                                    const linkLocation = s.LinkLocation ? s.LinkLocation.split(',').slice(0, 2).join(',') : '-';
+                                    return `
+                                        <tr class="${rowClass}">
+                                            <td><strong>${escapeHtml(s.GPOName || s.GPOGuid || '')}</strong></td>
+                                            <td style="font-size: 0.8rem;" title="${escapeHtml(s.LinkLocation || '')}">${escapeHtml(linkLocation)}</td>
+                                            <td>${escapeHtml(s.Scope || 'Computer')}</td>
+                                            <td>${s.Enforced ? '<span class="status-tag conflict">Yes</span>' : '<span style="color: var(--text-secondary);">No</span>'}</td>
+                                            <td><span class="status-tag ${status.cssClass}">${escapeHtml(status.label)}</span></td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (hasVerification && !gpoVerification.deviceFound) {
+                verificationTableHtml = `
+                    <div class="info-box warning" style="margin-top: 15px;">
+                        <strong>GPO verification unavailable:</strong> Device not found in Active Directory.
+                    </div>
+                `;
+            } else if (hasVerification && !gpoVerification.adReachable) {
+                verificationTableHtml = `
+                    <div class="info-box warning" style="margin-top: 15px;">
+                        <strong>GPO verification unavailable:</strong> Could not connect to Active Directory.
+                    </div>
+                `;
+            }
+
+            if (settings.length === 0 && !hasVerification) {
                 return `
                     <div class="section" id="section-gpo">
                         <div class="section-header collapsed">
@@ -1653,7 +1717,7 @@
             return `
                 <div class="section" id="section-gpo">
                     <div class="section-header collapsed">
-                        <h2>Group Policy - ${gpoCount} GPOs Applied, ${settings.length} Registry Settings</h2>
+                        <h2>Group Policy - ${gpoCount} GPOs Applied, ${settings.length} Registry Settings${verificationSummary}</h2>
                         <span class="toggle">&#9660;</span>
                     </div>
                     <div class="section-body hidden">
@@ -1661,6 +1725,9 @@
                             <strong>What this shows:</strong> Registry-based policies currently applied from Active Directory Group Policy Objects.<br>
                             <strong>Why it matters:</strong> These settings are managed via GPO. When migrating to Intune, you'll need to recreate equivalent policies.
                         </div>
+                        ${verificationTableHtml}
+                        ${settings.length > 0 ? `
+                        <h3 style="margin: 20px 0 10px; color: var(--text-secondary);">Registry Settings (${settings.length})</h3>
                         <div class="filter-bar">
                             <input type="text" id="gpo-search" placeholder="Search GPO settings..." oninput="filterTable('gpo-table', 'gpo-search')">
                         </div>
@@ -1690,6 +1757,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -2403,6 +2471,37 @@
                     </div>
                 </div>
             `;
+        }
+
+        // --- GPO Verification Helper Functions ---
+
+        function getGPOVerificationStatus(gpoGuid, gpoName, gpoVerificationData) {
+            // If no verification data, return unknown
+            if (!gpoVerificationData?.enabled || !gpoVerificationData?.verificationStates) {
+                return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
+            }
+
+            // Try to match by GPO GUID or name
+            const normalizedGuid = gpoGuid ? gpoGuid.toUpperCase() : '';
+            const normalizedName = gpoName ? gpoName.toLowerCase() : '';
+
+            const state = gpoVerificationData.verificationStates.find(s =>
+                (s.GPOGuid && s.GPOGuid.toUpperCase() === normalizedGuid) ||
+                (s.GPOName && normalizedName && s.GPOName.toLowerCase() === normalizedName)
+            );
+
+            if (!state) {
+                return { state: 'unknown', label: 'Unknown', cssClass: 'unknown' };
+            }
+
+            const stateMap = {
+                'applied': { state: 'applied', label: 'Applied', cssClass: 'applied' },
+                'denied': { state: 'denied', label: 'Security Filtered', cssClass: 'not-applied' },
+                'not-applied': { state: 'not-applied', label: 'Not Applicable', cssClass: 'unknown' },
+                'disabled': { state: 'disabled', label: 'Link Disabled', cssClass: 'pending' }
+            };
+
+            return stateMap[state.Status] || { state: state.Status, label: state.StatusLabel || state.Status, cssClass: 'unknown' };
         }
 
         // --- Deployment Verification Helper Functions ---

@@ -14,6 +14,7 @@
         'Get-DeviceGroupMemberships'
         'Get-SettingsCatalogMappings'
         'Get-DeviceDeploymentStatus'
+        'Get-GPOVerificationStatus'
         'Compare-PolicyOverlap'
         'Get-SCCMPolicyData'
     )

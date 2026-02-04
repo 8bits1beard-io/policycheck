@@ -19,6 +19,9 @@
 .PARAMETER SkipVerify
     Skip deployment verification that checks whether assigned policies are actually
     applied to the device. Verification is enabled by default.
+.PARAMETER SkipGPOVerify
+    Skip GPO application verification that checks whether linked GPOs are actually
+    applied to the device. Requires Active Directory access.
 .PARAMETER TenantId
     Azure AD tenant ID or domain for Graph authentication (e.g., "contoso.onmicrosoft.com").
 .PARAMETER SuggestMappings
@@ -56,6 +59,7 @@ param(
     [PSCredential]$Credential,
     [switch]$SkipIntune,
     [switch]$SkipVerify,
+    [switch]$SkipGPOVerify,
     [switch]$SuggestMappings,
     [string]$TenantId,
     [switch]$SkipSCCM,
@@ -76,6 +80,7 @@ if ($ComputerName) { $params['ComputerName'] = $ComputerName }
 if ($Credential) { $params['Credential'] = $Credential }
 if ($SkipIntune) { $params['SkipIntune'] = $true }
 if ($SkipVerify) { $params['SkipVerify'] = $true }
+if ($SkipGPOVerify) { $params['SkipGPOVerify'] = $true }
 if ($SuggestMappings) { $params['SuggestMappings'] = $true }
 if ($TenantId) { $params['TenantId'] = $TenantId }
 if ($SkipSCCM) { $params['SkipSCCM'] = $true }

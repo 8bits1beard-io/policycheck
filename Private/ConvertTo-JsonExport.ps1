@@ -109,7 +109,7 @@ function ConvertTo-JsonExport {
 
         # Build the complete export object
         $exportObject = [ordered]@{
-            schemaVersion = "1.1"
+            schemaVersion = "1.2"
             exportedAt    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             exportedBy    = "PolicyLens v1.2.0"
             device        = $deviceInfo
@@ -129,6 +129,21 @@ function ConvertTo-JsonExport {
                     intuneDeviceId  = $Result.DeploymentStatus.IntuneDeviceId
                     profileStates   = $Result.DeploymentStatus.ProfileStates
                     complianceStates = $Result.DeploymentStatus.ComplianceStates
+                }
+            } else { $null }
+            gpoVerificationData = if ($Result.PSObject.Properties['GPOVerification'] -and $Result.GPOVerification -and $Result.GPOVerification.Available) {
+                [ordered]@{
+                    enabled            = $true
+                    adReachable        = $Result.GPOVerification.ADReachable
+                    deviceFound        = $Result.GPOVerification.DeviceFound
+                    domainJoined       = $Result.GPOVerification.DomainJoined
+                    deviceDN           = $Result.GPOVerification.DeviceDN
+                    verificationStates = $Result.GPOVerification.VerificationStates
+                    appliedCount       = $Result.GPOVerification.AppliedCount
+                    deniedCount        = $Result.GPOVerification.DeniedCount
+                    notAppliedCount    = $Result.GPOVerification.NotAppliedCount
+                    disabledCount      = $Result.GPOVerification.DisabledCount
+                    collectedAt        = $Result.GPOVerification.CollectedAt
                 }
             } else { $null }
         }
